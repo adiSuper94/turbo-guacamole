@@ -15,18 +15,18 @@ We should think of ways of measuring thas.
 
 ## Options to consider
  - Posgres
-	 - Pro:
-		- We have used it all our dev lives, so less learning and fast development.
-	    - I like elephants
+  	- Pro:
+     		- We have used it all our dev lives, so less learning and fast development.
+     		- I like elephants
 	- Cons:
 		- Usually not recommended for write heavy load.
-	    -  Might have to add a cache layer to have decent perf, if we get reasonable # of users. 
+	    	-  Might have to add a cache layer to have decent perf, if we get reasonable # of users. 
  - MongoDB
 	 - Pro:
 		 - No schema so we can dump whatever we want.( Read as fast iteration)
 	- Cons:
 		- Me no like it
-	    - Boooo
+	    	- Boooo
  - Cassandra
 	 - Pros:
 		 - Better for fast writes.
