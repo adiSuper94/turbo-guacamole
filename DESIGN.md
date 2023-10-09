@@ -11,7 +11,6 @@ safe to say this is more write heavy than application like an email service. Mos
 resources seem to agree to this, stating read/write ration is 1:1.
 We should think of ways of measuring thas.
 
----
 
 ## Options to consider
  - Posgres
@@ -46,9 +45,8 @@ We should think of ways of measuring thas.
 		 - Favors consistency Consistent
 		 - Marketed as Open source Google Big Table
 
----
 
-### Key takeaway: 
+## Key takeaway: 
 
 With HBase and PG, the whole database can go down should the master node fail. With Cassandra, Scylla, on the other hand, if a node goes down the database will still be available. 
 However, because of the masterless architecture, data inconsistencies can occur.
@@ -56,6 +54,10 @@ However, because of the masterless architecture, data inconsistencies can occur.
 So essentially the Question is CP v AP.
 
 If we want to be flexible and be able to switch DBs we definitely need to make sure DB call are abstracted away from business logic. And we can then pug different DB adapters as we please.
+
+
+## Decision:
+Start by using PG. Setup monitoring infra to measure performance. And then use different DB if need arises.
 
 ---
 
