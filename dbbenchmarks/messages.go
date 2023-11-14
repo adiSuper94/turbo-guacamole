@@ -1,4 +1,3 @@
-// package dbbenchmarks
 package main
 
 import (
@@ -23,26 +22,29 @@ type Member struct {
 	user_id      string
 }
 
-
-func main() {
+func CreateDBConnection(connectionCount int32) *pgxpool.Pool {
 	pgxConfig, err := pgxpool.ParseConfig("postgres://adisuper:password@localhost:5432/turbo?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
-	var connectionCount int32
-	connectionCount = 1
-	duration := 1 * 60 * time.Second
 	pgxConfig.MaxConns = connectionCount
 
 	pgxConfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		pgxUUID.Register(conn.TypeMap())
 		return nil
 	}
-
 	conn, err := pgxpool.NewWithConfig(context.TODO(), pgxConfig)
 	if err != nil {
 		panic(err)
 	}
+	return conn
+}
+
+func main() {
+	var connectionCount int32
+	connectionCount = 16
+	duration := 2 * 60 * time.Second
+	conn := CreateDBConnection(connectionCount)
 	defer conn.Close()
 	populateUsers(conn, 1000)
 	populateChatRooms(conn, 10000)
