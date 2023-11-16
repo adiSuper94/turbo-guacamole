@@ -5,6 +5,7 @@ go 1.21.3
 require (
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/vgarvardt/pgx-google-uuid/v5 v5.0.0
+	nhooyr.io/websocket v1.8.10
 )
 
 require (
