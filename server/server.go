@@ -36,6 +36,18 @@ func (s Server) HandleMessage(msg message.Message, ctx context.Context, clientAd
 		delete(s.clients, clientAddr)
 	case message.Login:
 		s.clients[clientAddr] = clientConn
+		msg := message.Message{
+			Type: message.LoginAck,
+			Data: clientAddr,
+			From: "God",
+			To:   clientAddr,
+		}
+		bytes, err := json.Marshal(msg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error5: ", err)
+			return errors.New("Could not marshal message")
+		}
+		clientConn.Write(ctx, websocket.MessageText, bytes)
 	}
 	return nil
 }
