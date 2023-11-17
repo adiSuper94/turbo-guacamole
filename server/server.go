@@ -11,46 +11,30 @@ import (
 	"time"
 
 	"nhooyr.io/websocket"
+	"turboGuac/message"
 )
-
-type MessageType int
-
-const (
-	Text MessageType = iota
-	Login
-	Logout
-	SingleTick
-)
-
-type Message struct {
-	Type MessageType
-	Data string
-	To   string
-	From string
-}
 
 type Server struct {
 	clients map[string]*websocket.Conn
 }
 
-func (s Server) HandleMessage(msg Message, ctx context.Context, clientAddr string, clientConn *websocket.Conn) error {
+func (s Server) HandleMessage(msg message.Message, ctx context.Context, clientAddr string, clientConn *websocket.Conn) error {
 	switch msg.Type {
-	case Text:
+	case message.Text:
 		clientConn, ok := s.clients[msg.To]
 		if !ok {
 			fmt.Fprintln(os.Stderr, "Error4: `to` is offline")
 			break
 		}
-		msg.From, msg.To = msg.To, msg.From
 		bytes, err := json.Marshal(msg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error5: ", err)
 			return errors.New("Could not marshal message")
 		}
 		clientConn.Write(ctx, websocket.MessageText, bytes)
-	case Logout:
+	case message.Logout:
 		delete(s.clients, clientAddr)
-	case Login:
+	case message.Login:
 		s.clients[clientAddr] = clientConn
 	}
 	return nil
@@ -80,7 +64,7 @@ func main() {
 				fmt.Fprintln(os.Stderr, "Error2: ", err)
 				break
 			}
-			var msg Message
+			var msg message.Message
 			err = json.Unmarshal(rawMessageBytes, &msg)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error3: ", err)
