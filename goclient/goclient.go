@@ -83,6 +83,38 @@ func (tgc TurboGuacClient) SendMessage(data string, toChatRoomId uuid.UUID) erro
 	return nil
 }
 
+func (tgc TurboGuacClient) CreateChatRoom() error {
+	createChatRoomRequest := wsmessagespec.WSMessage{
+		Id:   uuid.New(),
+		Type: wsmessagespec.CreateChatRoom,
+		Data: "CreateChatRoom",
+		To:   uuid.Nil,
+		From: tgc.username,
+	}
+	err := tgc.sendWSMessage(createChatRoomRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "CreateChatRoom() failed in go-client: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func (tgc TurboGuacClient) AddMemberToChatRoom(chatRoomId uuid.UUID, memberUsername string) error {
+	addMemberRequest := wsmessagespec.WSMessage{
+		Id:   uuid.New(),
+		Type: wsmessagespec.AddMemberToChatRoom,
+		Data: memberUsername,
+		To:   chatRoomId,
+		From: tgc.username,
+	}
+	err := tgc.sendWSMessage(addMemberRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "AddMemberToChatRoom() failed in go-client: %v\n", err)
+		return err
+	}
+	return nil
+}
+
 func (tgc TurboGuacClient) sendWSMessage(msg wsmessagespec.WSMessage) error {
 	bytes, err := json.Marshal(msg)
 	if err != nil {
