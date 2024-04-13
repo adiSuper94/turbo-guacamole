@@ -10,6 +10,8 @@ const (
 	LoginAck
 	Logout
 	SingleTick
+	CreateChatRoom
+	AddMemberToChatRoom
 )
 
 type WSMessage struct {
