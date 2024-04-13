@@ -1,226 +1,255 @@
 package main
 
 import (
+	"adisuper94/turboguac/turbosdk"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
 	"os"
-	"strings"
-	"time"
 
-	"turboGuac/message"
-
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"nhooyr.io/websocket"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 )
 
-type model struct {
-	serverConn       *websocket.Conn
-	cancel           context.CancelFunc
-	selfAddr         string
-	toAddr           string
-	context          context.Context
-	textarea         textarea.Model
-	incomingMessages chan string
-	messages         []string
-	viewport         viewport.Model
-	err              error
+type UI int
+
+const (
+	OnlineUsers UI = iota
+	MyChatRooms
+	Chat
+)
+
+type ChatMessage struct {
+	From    string
+	Message string
 }
 
-func (m model) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink, receiveMessages(m), listenForIncomingMessages(m))
+type CachedChatRoom struct {
+	ChatRoomId   uuid.UUID
+	ChatRoomName string
+	Messages     []ChatMessage
 }
 
-// Update implements tea.Model.
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var (
-		tiCmd tea.Cmd
-		vpCmd tea.Cmd
-	)
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	m.textarea, tiCmd = m.textarea.Update(msg)
+type CachedChatRooms struct {
+	ChatRoomMap map[uuid.UUID]CachedChatRoom
+}
 
+type turboTUIClient struct {
+	tgc             *turbosdk.TurboGuacClient
+	focucedUI       UI
+	chat            chatModel
+	onlineUsers     onlineUserModel
+	myChatRooms     myChatRoomsModel
+	cachedChatRooms CachedChatRooms
+	wsMessageChan   chan turbosdk.IncomingChat
+}
+
+func WsListen(t turboTUIClient) tea.Cmd {
+	return func() tea.Msg {
+		t.tgc.WSListen(t.wsMessageChan)
+		return tea.Quit
+	}
+}
+
+var (
+	columnStyle = lipgloss.NewStyle().
+		// Padding(1, 2).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("241"))
+	focusedStyle = lipgloss.NewStyle().
+		// Padding(1, 2).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("41"))
+)
+
+func (t turboTUIClient) Init() tea.Cmd {
+	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init(), WsListen(t), ReadChannel(t))
+}
+
+func ReadChannel(t turboTUIClient) tea.Cmd {
+	return func() tea.Msg {
+		incomingChat := <-t.wsMessageChan
+		chatRoomId := incomingChat.To
+		cachedChatRoom, ok := t.cachedChatRooms.ChatRoomMap[chatRoomId]
+		if ok {
+			cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
+				From:    incomingChat.From,
+				Message: incomingChat.Message})
+			t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
+		}
+		return IncomingChatMsg(incomingChat)
+	}
+}
+
+type AddMemberToChatRoomMsg string
+
+func AddMemberToChatRoom(t turboTUIClient, username string) tea.Cmd {
+	return func() tea.Msg {
+		err := t.tgc.AddMemberToChatRoom(t.chat.activeChat.ID, username)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "AddUserToChatRoom() failed in myChatRoomsModel: \n %v", err)
+			return nil
+		}
+		return tea.Batch(UpdateMyChatRooms(t.myChatRooms), UpdateOnlineUsers(t.onlineUsers))
+	}
+}
+
+func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var m tea.Model
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		cmd = t.resizeChat(msg.Width, msg.Height-5)
 	case tea.KeyMsg:
 		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			fmt.Println(m.textarea.Value())
-			return m, tea.Quit
-		case tea.KeyEnter:
-			text := m.textarea.Value()
-			m.messages = append(m.messages, "You: "+text)
-			m.viewport.SetContent(strings.Join(m.messages, "\n"))
-			m.textarea.Reset()
-			m.viewport.GotoBottom()
-			sendTextMessage(text, m)
-		}
-	case IncomingMessage:
-		incomingMsg := string(msg)
-		m.messages = append(m.messages, m.toAddr+": "+incomingMsg)
-		m.viewport.SetContent(strings.Join(m.messages, "\n"))
-		m.viewport.GotoBottom()
-		listenForIncomingMessages(m)
-		return m, tea.Batch(tiCmd, vpCmd, listenForIncomingMessages(m))
-	}
-	return m, tea.Batch(tiCmd, vpCmd)
-}
-
-// View implements tea.Model.
-func (m model) View() string {
-
-	return fmt.Sprintf(
-		"%s\n\n%s",
-		m.viewport.View(),
-		m.textarea.View(),
-	) + "\n\n"
-}
-
-func initialModel(conn *websocket.Conn, ctx context.Context, addr string, toAddr string, cancel context.CancelFunc) model {
-	ta := textarea.New()
-	ta.Placeholder = "Enter your message here and press enter to send it"
-	ta.Focus()
-	ta.Prompt = "| "
-	ta.CharLimit = 180
-	ta.SetWidth(70)
-	ta.KeyMap.InsertNewline.SetEnabled(false)
-	vp := viewport.New(180, 8)
-	return model{
-		serverConn:       conn,
-		selfAddr:         addr,
-		toAddr:           toAddr,
-		cancel:           cancel,
-		context:          ctx,
-		textarea:         ta,
-		viewport:         vp,
-		incomingMessages: make(chan string),
-		messages:         []string{},
-		err:              nil,
-	}
-}
-
-func sendTextMessage(text string, model model) {
-	msg := message.Message{
-		Type: message.Text,
-		Data: text,
-		From: model.selfAddr,
-		To:   model.toAddr,
-	}
-	bytes, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error5: ", err)
-	}
-	model.serverConn.Write(model.context, websocket.MessageText, bytes)
-
-}
-
-func login(conn *websocket.Conn, ctx context.Context) string {
-	loginMsg := message.Message{
-		Type: message.Login,
-		Data: "",
-		From: "me",
-		To:   "God",
-	}
-	bytes, err := json.Marshal(loginMsg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error: login message is malformed", err)
-	}
-	conn.Write(ctx, websocket.MessageText, bytes)
-	_, respBytes, err := conn.Read(ctx)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error while reading login resposne. \n err: ", err)
-	}
-	var respMsg message.Message
-	err = json.Unmarshal(respBytes, &respMsg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error while unmarshalling login resposne. \n err: ", err)
-	}
-	return respMsg.Data
-}
-
-type IncomingMessage string
-
-func listenForIncomingMessages(model model) tea.Cmd {
-	return func() tea.Msg {
-		msg := <-model.incomingMessages
-		return IncomingMessage(msg)
-	}
-}
-
-func receiveMessages(m model) tea.Cmd {
-	return func() tea.Msg {
-		for {
-			_, rawMessageBytes, err := m.serverConn.Read(m.context)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error, while reading incoming messags", err)
-				continue
-			}
-			var msg message.Message
-			err = json.Unmarshal(rawMessageBytes, &msg)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error, unmarshalling incoming message", err)
-				continue
-			}
-			if msg.Type == message.Text {
-				m.incomingMessages <- msg.Data
+		case tea.KeyCtrlC:
+			return t, tea.Quit
+		case tea.KeyTab:
+			t.focucedUI = t.getNextFocus()
+		default:
+			switch t.focucedUI {
+			case OnlineUsers:
+				m, cmd = t.onlineUsers.Update(msg)
+				t.onlineUsers = m.(onlineUserModel)
+			case MyChatRooms:
+				m, cmd = t.myChatRooms.Update(msg)
+				t.myChatRooms = m.(myChatRoomsModel)
+			case Chat:
+				m, cmd = t.chat.Update(msg)
+				t.chat = m.(chatModel)
 			}
 		}
+	case OpenChatMsg:
+		t.focucedUI = Chat
+		m, cmd = t.chat.Update(msg)
+		t.chat = m.(chatModel)
+	case OnlineUsersMsg:
+		m, cmd = t.onlineUsers.Update(msg)
+		t.onlineUsers = m.(onlineUserModel)
+	case MyChatRoomsMsg:
+		m, cmd = t.myChatRooms.Update(msg)
+		t.myChatRooms = m.(myChatRoomsModel)
+	case AddMemberToCurrRoomMsg:
+		cmd = AddMemberToChatRoom(t, string(msg))
+	case IncomingChatMsg:
+		_, ok := t.cachedChatRooms.ChatRoomMap[msg.To]
+		var updateCmd tea.Cmd
+		if !ok {
+			updateCmd = tea.Batch(UpdateMyChatRooms(t.myChatRooms), UpdateOnlineUsers(t.onlineUsers))
+			cachedChatRoom := CachedChatRoom{ChatRoomId: msg.To, Messages: []ChatMessage{}}
+			cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{From: msg.From, Message: msg.Message})
+			t.cachedChatRooms.ChatRoomMap[msg.To] = cachedChatRoom
+		}
+		m, cmd = t.chat.Update(msg)
+		cmd = tea.Batch(cmd, ReadChannel(t))
+		t.chat = m.(chatModel)
+		cmd = tea.Batch(cmd, updateCmd)
+	case ChatWindowsResizeMsg:
+		m, cmd = t.chat.Update(msg)
+		t.chat = m.(chatModel)
+	case OnlineUserWindowsResizeMsg:
+		m, cmd = t.onlineUsers.Update(msg)
+		t.onlineUsers = m.(onlineUserModel)
+	case MyChatRoomsWindowsResizeMsg:
+		m, cmd = t.myChatRooms.Update(msg)
+		t.myChatRooms = m.(myChatRoomsModel)
 	}
+	return t, cmd
 }
 
-func selectFriendIp(addr string) string {
-	var friendIp string
-	for {
-		resp, err := http.Get("http://localhost:8080/activeUsers")
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		activeUsers := make([]string, 10)
-		respBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println(err)
-		}
-		err = json.Unmarshal(respBytes, &activeUsers)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println(activeUsers)
-		var idx int
-		_, err = fmt.Scanf("%d", &idx)
-		if err != nil || idx < 0 || idx >= len(activeUsers) {
-			fmt.Println(err, "You fool! Enter a valid index.")
-			continue
-		}
-		friendIp = activeUsers[idx]
-		if friendIp == addr {
-			fmt.Println("You fool! You can't talk to yourself.")
-			continue
-		}
-		break
+func (t turboTUIClient) View() string {
+	chatBoxView := t.chat.View()
+	onlineUsersView := t.onlineUsers.View()
+	myChatRoomsView := t.myChatRooms.View()
+	switch t.focucedUI {
+	case OnlineUsers:
+		onlineUsersView = focusedStyle.Render(onlineUsersView)
+		myChatRoomsView = columnStyle.Render(myChatRoomsView)
+		chatBoxView = columnStyle.Render(chatBoxView)
+	case MyChatRooms:
+		myChatRoomsView = focusedStyle.Render(myChatRoomsView)
+		onlineUsersView = columnStyle.Render(onlineUsersView)
+		chatBoxView = columnStyle.Render(chatBoxView)
+	case Chat:
+		chatBoxView = focusedStyle.Render(chatBoxView)
+		onlineUsersView = columnStyle.Render(onlineUsersView)
+		myChatRoomsView = columnStyle.Render(myChatRoomsView)
 	}
-	return friendIp
+	return lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.JoinVertical(lipgloss.Top, onlineUsersView, myChatRoomsView), chatBoxView)
+}
+
+type ChatWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+type OnlineUserWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+type MyChatRoomsWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+func (t turboTUIClient) resizeChat(width, height int) tea.Cmd {
+	return tea.Batch(
+		func() tea.Msg {
+			return ChatWindowsResizeMsg{Width: 2 * width / 3, Height: height}
+		},
+		func() tea.Msg {
+			return OnlineUserWindowsResizeMsg{Width: width / 3, Height: height / 2}
+		},
+		func() tea.Msg {
+			return MyChatRoomsWindowsResizeMsg{Width: width / 3, Height: height / 2}
+		},
+	)
+}
+
+func (t turboTUIClient) getNextFocus() UI {
+	switch t.focucedUI {
+	case OnlineUsers:
+		return MyChatRooms
+	case MyChatRooms:
+		return Chat
+	case Chat:
+		return OnlineUsers
+	}
+	return Chat
+}
+
+func initialMainModel() turboTUIClient {
+	var err error
+	t := turboTUIClient{}
+	var username string
+	fmt.Println("Welcome to TurboGuac!")
+	fmt.Println("Please enter tubroguac server address: ")
+	var serverAddress string
+	fmt.Scanln(&serverAddress)
+	fmt.Print("Enter your username: ")
+	fmt.Scanln(&username)
+	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), username, serverAddress)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "NewTurboGuacClient() failed in turboTUIClient: \n %v", err)
+		os.Exit(1)
+	}
+	t.focucedUI = Chat
+	totalWidth := 100
+	totalHeight := 40
+	t.chat = initialChatModel(t.tgc, 2*totalWidth/3, totalHeight)
+	t.onlineUsers = InitalOnlineUserModel(t.tgc, totalWidth/3, totalHeight/2)
+	t.myChatRooms = InitialMyChatRoomsModel(t.tgc, totalWidth/3, totalHeight/2)
+	t.wsMessageChan = make(chan turbosdk.IncomingChat)
+	t.cachedChatRooms = CachedChatRooms{ChatRoomMap: map[uuid.UUID]CachedChatRoom{}}
+	return t
 }
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-	conn, _, err := websocket.Dial(ctx, "ws://localhost:8080", nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "websocket.Dial: %v\n", err)
-		os.Exit(1)
-	}
-	defer conn.Close(websocket.StatusNormalClosure, "the sky is falling")
-	addr := login(conn, ctx)
-	friendIp := selectFriendIp(addr)
-
-	m := initialModel(conn, ctx, addr, friendIp, cancel)
-	p := tea.NewProgram(m)
+	ttc := initialMainModel()
+	p := tea.NewProgram(ttc)
 	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error in main(): \n %v", err)
+		os.Exit(1)
 	}
 }
