@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"adisuper94/turboguac/wsmessagespec"
+
 	"github.com/google/uuid"
 	"nhooyr.io/websocket"
 )
@@ -60,6 +61,10 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 		insertMessageParams.ID = msg.Id
 	}
 	insertedMessage, err := queries.InsertMessage(ctx, insertMessageParams)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while inserting message\n%v\n", err)
+		return err
+	}
 	msgAck := wsmessagespec.WSMessage{
 		Type: wsmessagespec.SingleTick,
 		Data: fmt.Sprintf("%s", insertedMessage.ID),
@@ -72,10 +77,6 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 	}
 	sender.conn.Write(ctx, websocket.MessageText, msgAckBytes)
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error while inserting message\n%v\n", err)
-		return err
-	}
 	for _, member := range chatMembers {
 		memberUserName := member.Username
 		insertMessageDeliveryParams := generated.InsertMessageDeliveryParams{
@@ -144,7 +145,7 @@ func (s Server) loginOrRegister(ctx context.Context, msg wsmessagespec.WSMessage
 	return &client, nil
 }
 
-func (s Server) logout(ctx context.Context, msg wsmessagespec.WSMessage) {
+func (s Server) logout(msg wsmessagespec.WSMessage) {
 	userName := msg.From
 	_, ok := s.clients[userName]
 	if !ok {
@@ -153,14 +154,100 @@ func (s Server) logout(ctx context.Context, msg wsmessagespec.WSMessage) {
 	delete(s.clients, userName)
 }
 
+func (s Server) createChatRoom(ctx context.Context, msg wsmessagespec.WSMessage) error {
+	queries := GetQueries()
+	chatRoom, err := queries.InsertChatRoom(ctx, generated.InsertChatRoomParams{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while creating chatroom\n%v\n", err)
+		return err
+	}
+	user, err := queries.GetUserByUsername(ctx, msg.From)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while getting user\n%v\n", err)
+		return err
+	}
+	_, err = queries.InsertMember(ctx, generated.InsertMemberParams{
+		ChatRoomID: chatRoom.ID,
+		UserID:     user.ID,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while inserting chatroom member\n%v\n", err)
+		return err
+	}
+	return nil
+}
+
+func (s Server) addMembertoChatRoom(ctx context.Context, msg wsmessagespec.WSMessage) error {
+	queries := GetQueries()
+	chatRoomId := msg.To
+	user, err := queries.GetUserByUsername(ctx, msg.From)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while getting user. Please register before send requests\n%v\n", err)
+		return err
+	}
+	chatRoomMembers, err := queries.GetChatRoomMembers(ctx, chatRoomId)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No members in chatroom yet, (This should not happenn. But I'll allow this for now)")
+			_, err := queries.GetChatRoomById(ctx, chatRoomId)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting chatroom\n%v\n", err)
+				return err
+			}
+
+		} else {
+			fmt.Fprintf(os.Stderr, "Error while getting chatroom members\n%v\n", err)
+			return err
+		}
+	}
+
+	userInChatRoom := false
+	for _, member := range chatRoomMembers {
+		if member.Username == msg.Data {
+			fmt.Println("User already in chatroom")
+			return nil
+		}
+		if member.Username == user.Username {
+			userInChatRoom = true
+			continue
+		}
+	}
+	if !userInChatRoom {
+		fmt.Println("User not in chatroom")
+		return errors.New("You cannot add a user to a chatroom you are not a member of")
+	}
+	userToAdd, err := queries.GetUserByUsername(ctx, msg.Data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while getting user to add\n%v\n", err)
+		return err
+	}
+	_, err = queries.InsertMember(ctx, generated.InsertMemberParams{
+		ChatRoomID: chatRoomId,
+		UserID:     userToAdd.ID,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while inserting chatroom member\n%v\n", err)
+		return err
+	}
+	return nil
+}
+
 func (s Server) HandleMessage(msg wsmessagespec.WSMessage, ctx context.Context, clientAddr string, clientConn *websocket.Conn) (*ActiveClient, error) {
 	switch msg.Type {
 	case wsmessagespec.Text:
-		s.sendMessage(ctx, msg)
+		return nil, s.sendMessage(ctx, msg)
 	case wsmessagespec.Logout:
-		s.logout(ctx, msg)
+		s.logout(msg)
 	case wsmessagespec.Login:
 		return s.loginOrRegister(ctx, msg, clientAddr, clientConn)
+	case wsmessagespec.CreateChatRoom:
+		err := s.createChatRoom(ctx, msg)
+		return nil, err
+	case wsmessagespec.AddMemberToChatRoom:
+		err := s.addMembertoChatRoom(ctx, msg)
+		return nil, err
+	case wsmessagespec.SingleTick, wsmessagespec.LoginAck:
+		fmt.Println("Received a tick or login ack, ignoring")
 	}
 	return nil, nil
 }
@@ -208,12 +295,23 @@ func main() {
 		c.Close(websocket.StatusNormalClosure, "")
 	})
 
-	http.HandleFunc("/activeUsers", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
 		var activeUsers []string
 		for k := range server.clients {
 			activeUsers = append(activeUsers, k)
 		}
 		json.NewEncoder(w).Encode(activeUsers)
+	})
+
+	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
+		queries := GetQueries()
+		chatRooms, err := queries.GetChatRoomByUserId(r.Context(), uuid.Nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error while getting chatrooms\n%v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(chatRooms)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))

@@ -12,6 +12,53 @@ import (
 	"github.com/google/uuid"
 )
 
+const getChatRoomById = `-- name: GetChatRoomById :one
+SELECT id, name, created_at, modified_at FROM chat_rooms WHERE id = $1
+`
+
+func (q *Queries) GetChatRoomById(ctx context.Context, id uuid.UUID) (ChatRoom, error) {
+	row := q.db.QueryRow(ctx, getChatRoomById, id)
+	var i ChatRoom
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.ModifiedAt,
+	)
+	return i, err
+}
+
+const getChatRoomByUserId = `-- name: GetChatRoomByUserId :many
+SELECT DISTINCT chat_rooms.id, chat_rooms.name FROM chat_rooms
+  INNER JOIN members on members.chat_room_id = chat_rooms.id
+  WHERE members.user_id = $1
+`
+
+type GetChatRoomByUserIdRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) GetChatRoomByUserId(ctx context.Context, userID uuid.UUID) ([]GetChatRoomByUserIdRow, error) {
+	rows, err := q.db.Query(ctx, getChatRoomByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetChatRoomByUserIdRow
+	for rows.Next() {
+		var i GetChatRoomByUserIdRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChatRoomMembers = `-- name: GetChatRoomMembers :many
 SELECT members.chat_room_id, members.user_id, members.created_at, members.modified_at, users.username, chat_rooms.name as chat_room_name FROM members
   INNER JOIN users on users.id = member.user_id  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id

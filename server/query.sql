@@ -23,3 +23,11 @@ INSERT INTO message_deliveries (message_id, chat_room_id, recipient_id, delivere
 
 -- name: GetUserByUsername :one
 SELECT * FROM users WHERE username = @username;
+
+-- name: GetChatRoomByUserId :many
+SELECT DISTINCT chat_rooms.id, chat_rooms.name FROM chat_rooms
+  INNER JOIN members on members.chat_room_id = chat_rooms.id
+  WHERE members.user_id = @user_id;
+
+-- name: GetChatRoomById :one
+SELECT * FROM chat_rooms WHERE id = @id;

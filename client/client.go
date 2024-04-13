@@ -175,28 +175,28 @@ func receiveMessages(m model) tea.Cmd {
 func selectFriendIp(addr string) string {
 	var friendIp string
 	for {
-		resp, err := http.Get("http://localhost:8080/activeUsers")
+		resp, err := http.Get("http://localhost:8080/online-users")
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		activeUsers := make([]string, 10)
+		onlineUsers := make([]string, 10)
 		respBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Println(err)
 		}
-		err = json.Unmarshal(respBytes, &activeUsers)
+		err = json.Unmarshal(respBytes, &onlineUsers)
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(activeUsers)
+		fmt.Println(onlineUsers)
 		var idx int
 		_, err = fmt.Scanf("%d", &idx)
-		if err != nil || idx < 0 || idx >= len(activeUsers) {
+		if err != nil || idx < 0 || idx >= len(onlineUsers) {
 			fmt.Println(err, "You fool! Enter a valid index.")
 			continue
 		}
-		friendIp = activeUsers[idx]
+		friendIp = onlineUsers[idx]
 		if friendIp == addr {
 			fmt.Println("You fool! You can't talk to yourself.")
 			continue

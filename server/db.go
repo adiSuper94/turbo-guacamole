@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"adisuper94/turboguac/server/generated"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"turboGuac/server/generated"
 )
 
 var pool *pgxpool.Pool
