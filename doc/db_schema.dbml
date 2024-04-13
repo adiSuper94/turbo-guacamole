@@ -1,0 +1,63 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table chat_rooms {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  name varchar(128) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  modified_at timestamptz [not null, default: `now()`]
+}
+
+Table members {
+  chat_room_id uuid [not null]
+  username varchar(64) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  modified_at timestamptz [not null, default: `now()`]
+  Indexes {
+    (chat_room_id, username) [pk]
+  }
+}
+
+Table users {
+  username varchar(64) [pk]
+  created_at timestamptz [not null, default: `now()`]
+  modified_at timestamptz [not null, default: `now()`]
+  Indexes {
+    username [unique]
+  }
+}
+
+Table messages {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  body text [not null, note: 'Content of the message']
+  chat_room_id uuid [not null]
+  sender_id varchar(64) [not null]
+  created_at timestamptz [not null, default: `now()`]
+  modified_at timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (id, chat_room_id) [unique, note:'This uk is for message_delivery fk']
+  }
+}
+
+Table message_deliveries {
+  message_id uuid [not null]
+  chat_room_id uuid [not null]
+  recipient_id varchar(64) [not null]
+  delivered bool [default: false, not null]
+  created_at timestamptz [not null, default: `now()`]
+  modified_at timestamptz [not null, default: `now()`]
+  Indexes {
+    (message_id, chat_room_id, recipient_id) [pk]
+  }
+
+}
+
+Ref: messages.chat_room_id > chat_rooms.id
+Ref: messages.sender_id > users.username
+
+Ref: members.chat_room_id > chat_rooms.id
+Ref: members.username > users.username
+
+Ref: message_deliveries.(message_id, chat_room_id) > messages.(id, chat_room_id)
+Ref: message_deliveries.(chat_room_id, recipient_id) >members.(chat_room_id, username)
