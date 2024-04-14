@@ -10,7 +10,6 @@ const (
 	LoginAck
 	Logout
 	SingleTick
-	CreateChatRoom
 	AddMemberToChatRoom
 )
 

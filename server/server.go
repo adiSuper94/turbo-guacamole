@@ -154,17 +154,17 @@ func (s Server) logout(msg wsmessagespec.WSMessage) {
 	delete(s.clients, userName)
 }
 
-func (s Server) createChatRoom(ctx context.Context, msg wsmessagespec.WSMessage) error {
+func createChatRoom(ctx context.Context, username string) (*generated.ChatRoom, error) {
 	queries := GetQueries()
 	chatRoom, err := queries.InsertChatRoom(ctx, generated.InsertChatRoomParams{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while creating chatroom\n%v\n", err)
-		return err
+		return nil, err
 	}
-	user, err := queries.GetUserByUsername(ctx, msg.From)
+	user, err := queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while getting user\n%v\n", err)
-		return err
+		return nil, err
 	}
 	_, err = queries.InsertMember(ctx, generated.InsertMemberParams{
 		ChatRoomID: chatRoom.ID,
@@ -172,9 +172,9 @@ func (s Server) createChatRoom(ctx context.Context, msg wsmessagespec.WSMessage)
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while inserting chatroom member\n%v\n", err)
-		return err
+		return nil, err
 	}
-	return nil
+	return &chatRoom, nil
 }
 
 func (s Server) addMembertoChatRoom(ctx context.Context, msg wsmessagespec.WSMessage) error {
@@ -240,9 +240,6 @@ func (s Server) HandleMessage(msg wsmessagespec.WSMessage, ctx context.Context, 
 		s.logout(msg)
 	case wsmessagespec.Login:
 		return s.loginOrRegister(ctx, msg, clientAddr, clientConn)
-	case wsmessagespec.CreateChatRoom:
-		err := s.createChatRoom(ctx, msg)
-		return nil, err
 	case wsmessagespec.AddMemberToChatRoom:
 		err := s.addMembertoChatRoom(ctx, msg)
 		return nil, err
@@ -250,6 +247,16 @@ func (s Server) HandleMessage(msg wsmessagespec.WSMessage, ctx context.Context, 
 		fmt.Println("Received a tick or login ack, ignoring")
 	}
 	return nil, nil
+}
+
+func getChatRooms(ctx context.Context, username string) ([]generated.ChatRoom, error) {
+	queries := GetQueries()
+	chatRooms, err := queries.GetChatRoomDetailsByUsername(ctx, username)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error while getting chatrooms\n%v\n", err)
+		return nil, err
+	}
+	return chatRooms, nil
 }
 
 func main() {
@@ -304,15 +311,34 @@ func main() {
 	})
 
 	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			chatRooms, err := getChatRooms(r.Context(), r.FormValue("username"))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			json.NewEncoder(w).Encode(chatRooms)
+		case http.MethodPost:
+			chatRoom, err := createChatRoom(r.Context(), r.FormValue("username"))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			json.NewEncoder(w).Encode(chatRoom)
+		}
+	})
+
+	http.HandleFunc("/dms", func(w http.ResponseWriter, r *http.Request) {
 		queries := GetQueries()
 		username := r.FormValue("username")
-		chatRooms, err := queries.GetChatRoomDetailsByUsername(r.Context(), username)
+		dms, err := queries.GetDMs(r.Context(), username)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while getting chatrooms\n%v\n", err)
+			fmt.Fprintf(os.Stderr, "Error while getting dms\n%v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		json.NewEncoder(w).Encode(chatRooms)
+		json.NewEncoder(w).Encode(dms)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))

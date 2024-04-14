@@ -4,10 +4,12 @@ import (
 	"adisuper94/turboguac/wsmessagespec"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"nhooyr.io/websocket"
@@ -21,8 +23,15 @@ type TurboGuacClient struct {
 }
 
 type ChatRoom struct {
-	Id   uuid.UUID
-	Name string
+	ID         uuid.UUID
+	Name       string
+	CreatedAt  time.Time
+	ModifiedAt time.Time
+}
+
+type DM struct {
+	Username   string
+	chatRoomId uuid.UUID
 }
 
 func NewTurboGuacClient(ctx context.Context, username string, serverAddr string) (*TurboGuacClient, error) {
@@ -78,6 +87,9 @@ func (tgc TurboGuacClient) Logout() error {
 }
 
 func (tgc TurboGuacClient) SendMessage(data string, toChatRoomId uuid.UUID) error {
+	if toChatRoomId == uuid.Nil {
+		fmt.Fprintf(os.Stderr, "cannot call SendMessage() go-client if toChatRoomId is nil\n")
+	}
 	message := wsmessagespec.WSMessage{
 		Id:   uuid.New(),
 		Type: wsmessagespec.Text,
@@ -88,22 +100,6 @@ func (tgc TurboGuacClient) SendMessage(data string, toChatRoomId uuid.UUID) erro
 	err := tgc.sendWSMessage(message)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "SendMessage() failed in go-client:\n")
-		return err
-	}
-	return nil
-}
-
-func (tgc TurboGuacClient) CreateChatRoom() error {
-	createChatRoomRequest := wsmessagespec.WSMessage{
-		Id:   uuid.New(),
-		Type: wsmessagespec.CreateChatRoom,
-		Data: "CreateChatRoom",
-		To:   uuid.Nil,
-		From: tgc.username,
-	}
-	err := tgc.sendWSMessage(createChatRoomRequest)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "CreateChatRoom() failed in go-client:\n")
 		return err
 	}
 	return nil
@@ -138,30 +134,52 @@ func (tgc TurboGuacClient) sendWSMessage(msg wsmessagespec.WSMessage) error {
 	}
 	return nil
 }
+
+func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
+	dms, err := tgc.GetDMs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "GetDMs() failed in go-client\n")
+		return uuid.Nil, err
+	}
+	for _, dm := range dms {
+		if dm.Username == username {
+			return dm.chatRoomId, nil
+		}
+	}
+	tgc.CreateChatRoom()
+	return uuid.Nil, nil
+}
+
+func (tgc TurboGuacClient) CreateChatRoom() (*ChatRoom, error) {
+	url := fmt.Sprintf("http://%s/chatrooms?username=%s", tgc.serverAddr, tgc.username)
+	return httpCall[*ChatRoom]("POST", url)
+}
+
 func (tgc TurboGuacClient) GetMyChatRooms() ([]ChatRoom, error) {
 	url := fmt.Sprintf("http://%s/chatrooms?username=%s", tgc.serverAddr, tgc.username)
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client\n", url)
-		return nil, err
-	}
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client\n")
-		return nil, err
-	}
-	var chatRooms []ChatRoom
-	err = json.Unmarshal(bytes, &chatRooms)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client\n")
-		return nil, err
-	}
-	return chatRooms, nil
+	return httpCall[[]ChatRoom]("GET", url)
 }
 
 func (tgc TurboGuacClient) GetOnlineUsers() ([]string, error) {
 	url := fmt.Sprintf("http://%s/online-users", tgc.serverAddr)
-	resp, err := http.Get(url)
+	return httpCall[[]string]("GET", url)
+}
+
+func (tgc TurboGuacClient) GetDMs() ([]DM, error) {
+	url := fmt.Sprintf("http://%s/dms?username=%s", tgc.serverAddr, tgc.username)
+	return httpCall[[]DM]("GET", url)
+}
+
+func httpCall[T []string | []DM | []ChatRoom | *ChatRoom](method string, url string) (T, error) {
+	var resp *http.Response
+	var err error
+	switch method {
+	case "GET":
+		resp, err = http.Get(url)
+	default:
+		return nil, errors.New("Unsupported HTTP method: " + method)
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client\n", url)
 		return nil, err
@@ -171,11 +189,11 @@ func (tgc TurboGuacClient) GetOnlineUsers() ([]string, error) {
 		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client\n")
 		return nil, err
 	}
-	var onlineUsers []string
-	err = json.Unmarshal(bytes, &onlineUsers)
+	var data T
+	err = json.Unmarshal(bytes, &data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client\n")
 		return nil, err
 	}
-	return onlineUsers, nil
+	return data, nil
 }
