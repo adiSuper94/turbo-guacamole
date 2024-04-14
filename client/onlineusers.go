@@ -50,7 +50,13 @@ func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "R":
 			cmd = UpdateOnlineUsers(m)
 		case "enter":
-			// send a private message to the highlighted user
+			selectedUser := m.onlineUsers[m.highlighted]
+			chatRoomId, err := m.tgc.StartDM(selectedUser)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "StartDM() failed in onlineUserModel: \n %v", err)
+				return m, tea.Quit
+			}
+			return m, OpenChat(goclient.ChatRoom{ID: chatRoomId, Name: selectedUser})
 		}
 	}
 	return m, cmd
