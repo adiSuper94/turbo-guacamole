@@ -7,6 +7,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/google/uuid"
 )
 
 type UI int
@@ -17,17 +18,59 @@ const (
 	Chat
 )
 
+type ChatMessage struct {
+	From    string
+	Message string
+}
+
+type CachedChatRoom struct {
+	ChatRoomId   uuid.UUID
+	ChatRoomName string
+	Messages     []ChatMessage
+}
+
+type CachedChatRooms struct {
+	ChatRoomMap map[uuid.UUID]CachedChatRoom
+}
+
 type turboTUIClient struct {
-	tgc         *goclient.TurboGuacClient
-	focucedUI   UI
-	chat        chatModel
-	onlineUsers onlineUserModel
-	myChatRooms myChatRoomsModel
-	ctx         context.Context
+	tgc             *turbosdk.TurboGuacClient
+	focucedUI       UI
+	chat            chatModel
+	onlineUsers     onlineUserModel
+	myChatRooms     myChatRoomsModel
+	cachedChatRooms CachedChatRooms
+	wsMessageChan   chan turbosdk.IncomingChat
+}
+
+func wsListen(t turboTUIClient) tea.Cmd {
+	return func() tea.Msg {
+		t.tgc.WSListen(t.wsMessageChan)
+		return tea.Quit
+	}
 }
 
 func (t turboTUIClient) Init() tea.Cmd {
-	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init())
+	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init(), wsListen(t), t.readChannel)
+}
+
+func (t turboTUIClient) readChannel() tea.Msg {
+	incomingChat := <-t.wsMessageChan
+	chatRoomId := incomingChat.To
+	cachedChatRoom, ok := t.cachedChatRooms.ChatRoomMap[chatRoomId]
+	if !ok {
+		// TODO: Fetch chat room name details from server
+		cachedChatRoom = CachedChatRoom{
+			ChatRoomId:   chatRoomId,
+			ChatRoomName: "Unknown",
+			Messages:     []ChatMessage{},
+		}
+	}
+	cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
+		From:    incomingChat.From,
+		Message: incomingChat.Message})
+	t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
+	return IncomingChatMsg(incomingChat)
 }
 
 func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -59,6 +102,10 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MyChatRoomsMsg:
 		m, cmd = t.myChatRooms.Update(msg)
 		t.myChatRooms = m.(myChatRoomsModel)
+	case IncomingChatMsg:
+		m, cmd = t.chat.Update(msg)
+		cmd = tea.Batch(cmd, t.readChannel)
+		t.chat = m.(chatModel)
 	}
 	return t, cmd
 }
@@ -82,7 +129,7 @@ func (t turboTUIClient) getNextFocus() UI {
 func initialMainModel() turboTUIClient {
 	var err error
 	t := turboTUIClient{}
-	t.tgc, err = goclient.NewTurboGuacClient(context.Background(), "aditya", "localhost:8080")
+	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), "aditya", "localhost:8080")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewTurboGuacClient() failed in turboTUIClient: \n %v", err)
 		os.Exit(1)

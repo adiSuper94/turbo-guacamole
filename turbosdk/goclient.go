@@ -1,4 +1,4 @@
-package goclient
+package turbosdk
 
 import (
 	"adisuper94/turboguac/wsmessagespec"
@@ -70,6 +70,47 @@ func (tgc TurboGuacClient) loginOrRegister() error {
 	return nil
 }
 
+type IncomingChat struct {
+	Id      uuid.UUID // message id
+	From    string    // username
+	To      uuid.UUID // chatRoomId
+	Message string
+}
+
+func (tgc TurboGuacClient) WSListen(channel chan IncomingChat) {
+	for {
+		msgType, msg, err := tgc.Conn.Read(tgc.ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "conn.Read() failed in go-client\n %v\n", err)
+			return
+		}
+		if msgType != websocket.MessageText {
+			fmt.Fprintf(os.Stderr, "msgType is not websocket.MessageText in go-client\n")
+			continue
+		}
+		var wsMsg wsmessagespec.WSMessage
+		err = json.Unmarshal(msg, &wsMsg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client\n")
+			continue
+		}
+		switch wsMsg.Type {
+		case wsmessagespec.Text:
+			incomingMsg := IncomingChat{
+				Id:      wsMsg.Id,
+				From:    wsMsg.From,
+				To:      wsMsg.To,
+				Message: wsMsg.Data,
+			}
+			channel <- incomingMsg
+		case wsmessagespec.LoginAck:
+			fmt.Println("Recieved Acknowledgement for Login")
+		case wsmessagespec.SingleTick:
+			fmt.Println("Recieved SingleTick")
+		}
+	}
+}
+
 func (tgc TurboGuacClient) Logout() error {
 	logoutRequest := wsmessagespec.WSMessage{
 		Id:   uuid.New(),
@@ -88,7 +129,8 @@ func (tgc TurboGuacClient) Logout() error {
 
 func (tgc TurboGuacClient) SendMessage(data string, toChatRoomId uuid.UUID) error {
 	if toChatRoomId == uuid.Nil {
-		fmt.Fprintf(os.Stderr, "cannot call SendMessage() go-client if toChatRoomId is nil\n")
+		// fmt.Fprintf(os.Stderr, "cannot call SendMessage() go-client if toChatRoomId is nil\n")
+		return nil
 	}
 	message := wsmessagespec.WSMessage{
 		Id:   uuid.New(),
@@ -176,6 +218,8 @@ func httpCall[T []string | []DM | []ChatRoom | *ChatRoom](method string, url str
 	switch method {
 	case "GET":
 		resp, err = http.Get(url)
+	case "POST":
+		resp, err = http.Post(url, "application/json", nil)
 	default:
 		return nil, errors.New("Unsupported HTTP method: " + method)
 	}
@@ -185,6 +229,7 @@ func httpCall[T []string | []DM | []ChatRoom | *ChatRoom](method string, url str
 		return nil, err
 	}
 	bytes, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client\n")
 		return nil, err

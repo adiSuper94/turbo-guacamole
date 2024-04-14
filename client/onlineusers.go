@@ -9,7 +9,7 @@ import (
 )
 
 type onlineUserModel struct {
-	tgc         *goclient.TurboGuacClient
+	tgc         *turbosdk.TurboGuacClient
 	onlineUsers []string
 	highlighted int
 }
@@ -56,7 +56,7 @@ func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				fmt.Fprintf(os.Stderr, "StartDM() failed in onlineUserModel: \n %v", err)
 				return m, tea.Quit
 			}
-			return m, OpenChat(goclient.ChatRoom{ID: chatRoomId, Name: selectedUser})
+			return m, OpenChat(turbosdk.ChatRoom{ID: chatRoomId, Name: selectedUser})
 		}
 	}
 	return m, cmd

@@ -11,15 +11,17 @@ import (
 )
 
 type chatModel struct {
-	tgc        *goclient.TurboGuacClient
+	tgc        *turbosdk.TurboGuacClient
 	textbox    textarea.Model
 	messages   viewport.Model
-	activeChat goclient.ChatRoom
+	activeChat turbosdk.ChatRoom
 }
 
-type OpenChatMsg goclient.ChatRoom
+type OpenChatMsg turbosdk.ChatRoom
 
-func OpenChat(chatRoom goclient.ChatRoom) tea.Cmd {
+type IncomingChatMsg turbosdk.IncomingChat
+
+func OpenChat(chatRoom turbosdk.ChatRoom) tea.Cmd {
 	return func() tea.Msg {
 		return OpenChatMsg(chatRoom)
 	}
@@ -34,8 +36,12 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.textbox, taCmd = m.textbox.Update(msg)
 	m.messages, vpCmd = m.messages.Update(msg)
 	switch msg := msg.(type) {
+	case IncomingChatMsg:
+		if m.activeChat.ID == msg.To {
+			m.messages.SetContent(fmt.Sprintf("%s\n%s: %s", m.messages.View(), msg.From, msg.Message))
+		}
 	case OpenChatMsg:
-		m.activeChat = goclient.ChatRoom(msg)
+		m.activeChat = turbosdk.ChatRoom(msg)
 		m.textbox.Reset()
 		m.messages.SetContent("")
 	case tea.KeyMsg:
@@ -55,10 +61,10 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m chatModel) View() string {
-	return fmt.Sprintf("%s\n%s", m.textbox.View(), m.messages.View())
+	return fmt.Sprintf("%s\n\n%s", m.messages.View(), m.textbox.View())
 }
 
-func initialChatModel(tgc *goclient.TurboGuacClient) chatModel {
+func initialChatModel(tgc *turbosdk.TurboGuacClient) chatModel {
 	ta := textarea.New()
 	ta.Placeholder = "Type your message here ..."
 	ta.Focus()
@@ -66,6 +72,6 @@ func initialChatModel(tgc *goclient.TurboGuacClient) chatModel {
 	ta.CharLimit = 100
 	ta.SetWidth(70)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
-	messagesCanvas := viewport.New(180, 10)
+	messagesCanvas := viewport.New(180, 8)
 	return chatModel{tgc: tgc, textbox: ta, messages: messagesCanvas}
 }

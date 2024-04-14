@@ -9,12 +9,12 @@ import (
 )
 
 type myChatRoomsModel struct {
-	tgc         *goclient.TurboGuacClient
-	myChatRooms []goclient.ChatRoom
+	tgc         *turbosdk.TurboGuacClient
+	myChatRooms []turbosdk.ChatRoom
 	highlighted int
 }
 
-type MyChatRoomsMsg []goclient.ChatRoom
+type MyChatRoomsMsg []turbosdk.ChatRoom
 
 func UpdateMyChatRooms(m myChatRoomsModel) tea.Cmd {
 	return func() tea.Msg {
@@ -51,7 +51,7 @@ func (m myChatRoomsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd = UpdateMyChatRooms(m)
 		case "enter":
 			selectedChatRoom := m.myChatRooms[m.highlighted]
-			return m, OpenChat(goclient.ChatRoom{ID: selectedChatRoom.ID, Name: selectedChatRoom.Name})
+			return m, OpenChat(turbosdk.ChatRoom{ID: selectedChatRoom.ID, Name: selectedChatRoom.Name})
 		}
 	}
 	return m, cmd
