@@ -1,7 +1,7 @@
 package main
 
 import (
-	"adisuper94/turboguac/goclient"
+	"adisuper94/turboguac/turbosdk"
 	"fmt"
 	"os"
 

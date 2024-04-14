@@ -1,4 +1,4 @@
-module adisuper94/turboguac/goclient
+module adisuper94/turboguac/turbosdk
 
 go 1.21.3
 
