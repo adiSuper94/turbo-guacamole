@@ -1,19 +1,20 @@
-module turboGuac/client
+module adisuper94/turboguac/client
 
 go 1.21.3
 
 require (
+	adisuper94/turboguac/goclient v0.0.0-00010101000000-000000000000
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
-	nhooyr.io/websocket v1.8.10
-	turboGuac/message v0.0.0-00010101000000-000000000000
 )
 
 require (
+	adisuper94/turboguac/wsmessagespec v0.0.0-00010101000000-000000000000 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/lipgloss v0.7.1 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -27,6 +28,9 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
+	nhooyr.io/websocket v1.8.11 // indirect
 )
 
-replace turboGuac/message => ../message
+replace adisuper94/turboguac/wsmessagespec => ../wsmessagespec
+
+replace adisuper94/turboguac/goclient => ../goclient
