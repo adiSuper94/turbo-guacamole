@@ -27,13 +27,12 @@ type turboTUIClient struct {
 }
 
 func (t turboTUIClient) Init() tea.Cmd {
-	t.chat.Init()
-	t.onlineUsers.Init()
-	t.myChatRooms.Init()
-	return nil
+	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init())
 }
 
 func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var m tea.Model
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -44,15 +43,24 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			switch t.focucedUI {
 			case OnlineUsers:
-				t.onlineUsers.Update(msg)
+				m, cmd = t.onlineUsers.Update(msg)
+				t.onlineUsers = m.(onlineUserModel)
 			case MyChatRooms:
-				t.myChatRooms.Update(msg)
+				m, cmd = t.myChatRooms.Update(msg)
+				t.myChatRooms = m.(myChatRoomsModel)
 			case Chat:
-				t.chat.Update(msg)
+				m, cmd = t.chat.Update(msg)
+				t.chat = m.(chatModel)
 			}
 		}
+	case OnlineUsersMsg:
+		m, cmd = t.onlineUsers.Update(msg)
+		t.onlineUsers = m.(onlineUserModel)
+	case MyChatRoomsMsg:
+		m, cmd = t.myChatRooms.Update(msg)
+		t.myChatRooms = m.(myChatRoomsModel)
 	}
-	return t, nil
+	return t, cmd
 }
 
 func (t turboTUIClient) View() string {

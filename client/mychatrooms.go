@@ -14,20 +14,29 @@ type myChatRoomsModel struct {
 	highlighted int
 }
 
-func (m myChatRoomsModel) Init() tea.Cmd {
-	var err error
-	m.myChatRooms, err = m.tgc.GetMyChatRooms()
-	m.highlighted = 0
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "GetMyChatRooms() failed in myChatRoomsModel: \n %v", err)
-		return tea.Quit
+type MyChatRoomsMsg []goclient.ChatRoom
+
+func UpdateMyChatRooms(m myChatRoomsModel) tea.Cmd {
+	return func() tea.Msg {
+		myChatRooms, err := m.tgc.GetMyChatRooms()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "GetMyChatRooms() REFRESH failed in myChatRoomsModel: \n %v", err)
+			return tea.Quit
+		}
+		return MyChatRoomsMsg(myChatRooms)
 	}
-	return nil
+}
+
+func (m myChatRoomsModel) Init() tea.Cmd {
+	m.highlighted = 0
+	return UpdateMyChatRooms(m)
 }
 
 func (m myChatRoomsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var err error
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
+	case MyChatRoomsMsg:
+		m.myChatRooms = msg
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "j", "down":
@@ -39,16 +48,12 @@ func (m myChatRoomsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.highlighted--
 			}
 		case "R":
-			m.myChatRooms, err = m.tgc.GetMyChatRooms()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "GetMyChatRooms() REFRESH failed in myChatRoomsModel: \n %v", err)
-				return m, tea.Quit
-			}
+			cmd = UpdateMyChatRooms(m)
 		case "enter":
 			// join the highlighted chat room
 		}
 	}
-	return m, nil
+	return m, cmd
 }
 
 func (m myChatRoomsModel) View() string {
