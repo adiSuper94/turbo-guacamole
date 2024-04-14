@@ -305,7 +305,8 @@ func main() {
 
 	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
 		queries := GetQueries()
-		chatRooms, err := queries.GetChatRoomByUserId(r.Context(), uuid.Nil)
+		username := r.FormValue("username")
+		chatRooms, err := queries.GetChatRoomDetailsByUsername(r.Context(), username)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting chatrooms\n%v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)

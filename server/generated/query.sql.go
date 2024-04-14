@@ -28,27 +28,28 @@ func (q *Queries) GetChatRoomById(ctx context.Context, id uuid.UUID) (ChatRoom, 
 	return i, err
 }
 
-const getChatRoomByUserId = `-- name: GetChatRoomByUserId :many
-SELECT DISTINCT chat_rooms.id, chat_rooms.name FROM chat_rooms
-  INNER JOIN members on members.chat_room_id = chat_rooms.id
-  WHERE members.user_id = $1
+const getChatRoomDetailsByUsername = `-- name: GetChatRoomDetailsByUsername :many
+SELECT  members.chat_room_id, chat_rooms.name FROM users
+  INNER JOIN members on members.user_id = users.id
+  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
+  WHERE users.username = $1
 `
 
-type GetChatRoomByUserIdRow struct {
-	ID   uuid.UUID
-	Name string
+type GetChatRoomDetailsByUsernameRow struct {
+	ChatRoomID uuid.UUID
+	Name       string
 }
 
-func (q *Queries) GetChatRoomByUserId(ctx context.Context, userID uuid.UUID) ([]GetChatRoomByUserIdRow, error) {
-	rows, err := q.db.Query(ctx, getChatRoomByUserId, userID)
+func (q *Queries) GetChatRoomDetailsByUsername(ctx context.Context, userName string) ([]GetChatRoomDetailsByUsernameRow, error) {
+	rows, err := q.db.Query(ctx, getChatRoomDetailsByUsername, userName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetChatRoomByUserIdRow
+	var items []GetChatRoomDetailsByUsernameRow
 	for rows.Next() {
-		var i GetChatRoomByUserIdRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		var i GetChatRoomDetailsByUsernameRow
+		if err := rows.Scan(&i.ChatRoomID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
