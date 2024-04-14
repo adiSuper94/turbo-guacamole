@@ -3,7 +3,6 @@ package main
 import (
 	"adisuper94/turboguac/server/generated"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"adisuper94/turboguac/wsmessagespec"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"nhooyr.io/websocket"
 )
 
@@ -111,7 +111,7 @@ func (s Server) loginOrRegister(ctx context.Context, msg wsmessagespec.WSMessage
 	queries := GetQueries()
 	user, err := queries.GetUserByUsername(ctx, msg.From)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			user, err = queries.InsertUser(ctx, generated.InsertUserParams{
 				Username: msg.From,
 			})
@@ -187,7 +187,7 @@ func (s Server) addMembertoChatRoom(ctx context.Context, msg wsmessagespec.WSMes
 	}
 	chatRoomMembers, err := queries.GetChatRoomMembers(ctx, chatRoomId)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			fmt.Println("No members in chatroom yet, (This should not happenn. But I'll allow this for now)")
 			_, err := queries.GetChatRoomById(ctx, chatRoomId)
 			if err != nil {

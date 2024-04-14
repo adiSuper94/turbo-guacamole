@@ -32,9 +32,10 @@ func NewTurboGuacClient(ctx context.Context, username string, serverAddr string)
 		os.Exit(1)
 	}
 	tgc := TurboGuacClient{
-		ctx:      ctx,
-		Conn:     conn,
-		username: username,
+		ctx:        ctx,
+		Conn:       conn,
+		username:   username,
+		serverAddr: serverAddr,
 	}
 	err = tgc.loginOrRegister()
 	if err != nil {
@@ -138,42 +139,42 @@ func (tgc TurboGuacClient) sendWSMessage(msg wsmessagespec.WSMessage) error {
 	return nil
 }
 func (tgc TurboGuacClient) GetMyChatRooms() ([]ChatRoom, error) {
-	url := fmt.Sprintf("https://%s/chatrooms?username=%s", tgc.serverAddr, tgc.username)
+	url := fmt.Sprintf("http://%s/chatrooms?username=%s", tgc.serverAddr, tgc.username)
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client", url)
+		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client\n", url)
 		return nil, err
 	}
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client")
+		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client\n")
 		return nil, err
 	}
 	var chatRooms []ChatRoom
 	err = json.Unmarshal(bytes, &chatRooms)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client")
+		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client\n")
 		return nil, err
 	}
 	return chatRooms, nil
 }
 
 func (tgc TurboGuacClient) GetOnlineUsers() ([]string, error) {
-	url := fmt.Sprintf("https://%s/online-users", tgc.serverAddr)
+	url := fmt.Sprintf("http://%s/online-users", tgc.serverAddr)
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client", url)
+		fmt.Fprintf(os.Stderr, "http.Get(%s) failed in go-client\n", url)
 		return nil, err
 	}
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client")
+		fmt.Fprintf(os.Stderr, "io.ReadAll() failed in go-client\n")
 		return nil, err
 	}
 	var onlineUsers []string
 	err = json.Unmarshal(bytes, &onlineUsers)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client")
+		fmt.Fprintf(os.Stderr, "json.Unmarshal() failed in go-client\n")
 		return nil, err
 	}
 	return onlineUsers, nil
