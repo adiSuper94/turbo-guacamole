@@ -19,7 +19,7 @@ type ChatRoom struct {
 
 type Member struct {
 	ChatRoomID uuid.UUID
-	UserID     uuid.UUID
+	Username   string
 	CreatedAt  time.Time
 	ModifiedAt time.Time
 }
@@ -29,7 +29,7 @@ type Message struct {
 	// Content of the message
 	Body       string
 	ChatRoomID uuid.UUID
-	SenderID   uuid.UUID
+	SenderID   string
 	CreatedAt  time.Time
 	ModifiedAt time.Time
 }
@@ -37,14 +37,13 @@ type Message struct {
 type MessageDelivery struct {
 	MessageID   uuid.UUID
 	ChatRoomID  uuid.UUID
-	RecipientID uuid.UUID
+	RecipientID string
 	Delivered   bool
 	CreatedAt   time.Time
 	ModifiedAt  time.Time
 }
 
 type User struct {
-	ID         uuid.UUID
 	Username   string
 	CreatedAt  time.Time
 	ModifiedAt time.Time

@@ -36,7 +36,7 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 		fmt.Fprintf(os.Stderr, "Error: Could not get chat_room members\n%v\n", err)
 		return err
 	}
-	var senderId uuid.UUID
+	var senderUname string
 	var sender ActiveClient
 	for _, member := range chatMembers {
 		if member.Username == msg.From {
@@ -45,16 +45,16 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 			if !ok {
 				return errors.New("you cannot send a message if you are not logged in")
 			}
-			senderId = member.UserID
+			senderUname = member.Username
 			break
 		}
 	}
-	if senderId == uuid.Nil {
+	if senderUname == "" {
 		return errors.New("you cannot send a message to a chatroom you are not a member of")
 	}
 	insertMessageParams := generated.InsertMessageParams{
 		ChatRoomID: chatRoomId,
-		SenderID:   senderId,
+		SenderID:   senderUname,
 		Body:       msg.Data,
 	}
 	if msg.Id != uuid.Nil {
@@ -82,7 +82,7 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 		insertMessageDeliveryParams := generated.InsertMessageDeliveryParams{
 			MessageID:   insertedMessage.ID,
 			ChatRoomID:  chatRoomId,
-			RecipientID: member.UserID,
+			RecipientID: member.Username,
 		}
 		if memberUserName == msg.From {
 			continue
@@ -168,7 +168,7 @@ func (s Server) createChatRoom(ctx context.Context, msg wsmessagespec.WSMessage)
 	}
 	_, err = queries.InsertMember(ctx, generated.InsertMemberParams{
 		ChatRoomID: chatRoom.ID,
-		UserID:     user.ID,
+		Username:   user.Username,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while inserting chatroom member\n%v\n", err)
@@ -223,7 +223,7 @@ func (s Server) addMembertoChatRoom(ctx context.Context, msg wsmessagespec.WSMes
 	}
 	_, err = queries.InsertMember(ctx, generated.InsertMemberParams{
 		ChatRoomID: chatRoomId,
-		UserID:     userToAdd.ID,
+		Username:   userToAdd.Username,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while inserting chatroom member\n%v\n", err)

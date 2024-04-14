@@ -29,27 +29,26 @@ func (q *Queries) GetChatRoomById(ctx context.Context, id uuid.UUID) (ChatRoom, 
 }
 
 const getChatRoomDetailsByUsername = `-- name: GetChatRoomDetailsByUsername :many
-SELECT  members.chat_room_id, chat_rooms.name FROM users
-  INNER JOIN members on members.user_id = users.id
+SELECT chat_rooms.id, chat_rooms.name, chat_rooms.created_at, chat_rooms.modified_at FROM members
   INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
-  WHERE users.username = $1
+  WHERE members.username = $1
 `
 
-type GetChatRoomDetailsByUsernameRow struct {
-	ChatRoomID uuid.UUID
-	Name       string
-}
-
-func (q *Queries) GetChatRoomDetailsByUsername(ctx context.Context, userName string) ([]GetChatRoomDetailsByUsernameRow, error) {
+func (q *Queries) GetChatRoomDetailsByUsername(ctx context.Context, userName string) ([]ChatRoom, error) {
 	rows, err := q.db.Query(ctx, getChatRoomDetailsByUsername, userName)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetChatRoomDetailsByUsernameRow
+	var items []ChatRoom
 	for rows.Next() {
-		var i GetChatRoomDetailsByUsernameRow
-		if err := rows.Scan(&i.ChatRoomID, &i.Name); err != nil {
+		var i ChatRoom
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.ModifiedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -61,17 +60,16 @@ func (q *Queries) GetChatRoomDetailsByUsername(ctx context.Context, userName str
 }
 
 const getChatRoomMembers = `-- name: GetChatRoomMembers :many
-SELECT members.chat_room_id, members.user_id, members.created_at, members.modified_at, users.username, chat_rooms.name as chat_room_name FROM members
-  INNER JOIN users on users.id = member.user_id  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
+SELECT members.chat_room_id, members.username, members.created_at, members.modified_at,  chat_rooms.name as chat_room_name FROM members
+  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
   WHERE chat_rooms.id = $1
 `
 
 type GetChatRoomMembersRow struct {
 	ChatRoomID   uuid.UUID
-	UserID       uuid.UUID
+	Username     string
 	CreatedAt    time.Time
 	ModifiedAt   time.Time
-	Username     string
 	ChatRoomName string
 }
 
@@ -86,10 +84,9 @@ func (q *Queries) GetChatRoomMembers(ctx context.Context, chatRoomID uuid.UUID) 
 		var i GetChatRoomMembersRow
 		if err := rows.Scan(
 			&i.ChatRoomID,
-			&i.UserID,
+			&i.Username,
 			&i.CreatedAt,
 			&i.ModifiedAt,
-			&i.Username,
 			&i.ChatRoomName,
 		); err != nil {
 			return nil, err
@@ -102,19 +99,45 @@ func (q *Queries) GetChatRoomMembers(ctx context.Context, chatRoomID uuid.UUID) 
 	return items, nil
 }
 
+const getDMs = `-- name: GetDMs :many
+SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_room_id FROM members
+  GROUP BY members.chat_room_id HAVING count(members.username) = 2) AS private_chats
+  INNER JOIN members ON members.chat_room_id = private_chats.room_id WHERE members.username != $1
+`
+
+type GetDMsRow struct {
+	ChatRoomID uuid.UUID
+	Username   string
+}
+
+func (q *Queries) GetDMs(ctx context.Context, username string) ([]GetDMsRow, error) {
+	rows, err := q.db.Query(ctx, getDMs, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDMsRow
+	for rows.Next() {
+		var i GetDMsRow
+		if err := rows.Scan(&i.ChatRoomID, &i.Username); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, created_at, modified_at FROM users WHERE username = $1
+SELECT username, created_at, modified_at FROM users WHERE username = $1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByUsername, username)
 	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.CreatedAt,
-		&i.ModifiedAt,
-	)
+	err := row.Scan(&i.Username, &i.CreatedAt, &i.ModifiedAt)
 	return i, err
 }
 
@@ -141,20 +164,20 @@ func (q *Queries) InsertChatRoom(ctx context.Context, arg InsertChatRoomParams) 
 }
 
 const insertMember = `-- name: InsertMember :one
-INSERT INTO members (chat_room_id, user_id) VALUES ($1, $2) RETURNING chat_room_id, user_id, created_at, modified_at
+INSERT INTO members (chat_room_id, username) VALUES ($1, $2) RETURNING chat_room_id, username, created_at, modified_at
 `
 
 type InsertMemberParams struct {
 	ChatRoomID uuid.UUID
-	UserID     uuid.UUID
+	Username   string
 }
 
 func (q *Queries) InsertMember(ctx context.Context, arg InsertMemberParams) (Member, error) {
-	row := q.db.QueryRow(ctx, insertMember, arg.ChatRoomID, arg.UserID)
+	row := q.db.QueryRow(ctx, insertMember, arg.ChatRoomID, arg.Username)
 	var i Member
 	err := row.Scan(
 		&i.ChatRoomID,
-		&i.UserID,
+		&i.Username,
 		&i.CreatedAt,
 		&i.ModifiedAt,
 	)
@@ -169,7 +192,7 @@ INSERT INTO messages (id, chat_room_id ,sender_id, body, created_at, modified_at
 type InsertMessageParams struct {
 	ID         uuid.UUID
 	ChatRoomID uuid.UUID
-	SenderID   uuid.UUID
+	SenderID   string
 	Body       string
 	CreatedAt  time.Time
 	ModifiedAt time.Time
@@ -204,7 +227,7 @@ INSERT INTO message_deliveries (message_id, chat_room_id, recipient_id, delivere
 type InsertMessageDeliveryParams struct {
 	MessageID   uuid.UUID
 	ChatRoomID  uuid.UUID
-	RecipientID uuid.UUID
+	RecipientID string
 	Delivered   bool
 }
 
@@ -229,7 +252,7 @@ func (q *Queries) InsertMessageDelivery(ctx context.Context, arg InsertMessageDe
 
 const insertUser = `-- name: InsertUser :one
 INSERT INTO users (username,  created_at, modified_at)
-  VALUES ($1, $2, $3) RETURNING id, username, created_at, modified_at
+  VALUES ($1, $2, $3) RETURNING username, created_at, modified_at
 `
 
 type InsertUserParams struct {
@@ -241,11 +264,6 @@ type InsertUserParams struct {
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, insertUser, arg.Username, arg.CreatedAt, arg.ModifiedAt)
 	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.CreatedAt,
-		&i.ModifiedAt,
-	)
+	err := row.Scan(&i.Username, &i.CreatedAt, &i.ModifiedAt)
 	return i, err
 }

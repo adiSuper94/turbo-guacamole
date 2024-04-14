@@ -10,11 +10,11 @@ INSERT INTO users (username,  created_at, modified_at)
 INSERT INTO chat_rooms (name, created_at, modified_at) VALUES (@name, @created_at, @modified_at) returning *;
 
 -- name: InsertMember :one
-INSERT INTO members (chat_room_id, user_id) VALUES (@chat_room_id, @user_id) RETURNING *;
+INSERT INTO members (chat_room_id, username) VALUES (@chat_room_id, @username) RETURNING *;
 
 -- name: GetChatRoomMembers :many
-SELECT members.*, users.username, chat_rooms.name as chat_room_name FROM members
-  INNER JOIN users on users.id = member.user_id  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
+SELECT members.*,  chat_rooms.name as chat_room_name FROM members
+  INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
   WHERE chat_rooms.id = @chat_room_id;
 
 -- name: InsertMessageDelivery :one
@@ -25,10 +25,14 @@ INSERT INTO message_deliveries (message_id, chat_room_id, recipient_id, delivere
 SELECT * FROM users WHERE username = @username;
 
 -- name: GetChatRoomDetailsByUsername :many
-SELECT  members.chat_room_id, chat_rooms.name FROM users
-  INNER JOIN members on members.user_id = users.id
+SELECT chat_rooms.* FROM members
   INNER JOIN chat_rooms on chat_rooms.id = members.chat_room_id
-  WHERE users.username = @user_name;
+  WHERE members.username = @user_name;
 
 -- name: GetChatRoomById :one
 SELECT * FROM chat_rooms WHERE id = @id;
+
+-- name: GetDMs :many
+SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_room_id FROM members
+  GROUP BY members.chat_room_id HAVING count(members.username) = 2) AS private_chats
+  INNER JOIN members ON members.chat_room_id = private_chats.room_id WHERE members.username != @username;
