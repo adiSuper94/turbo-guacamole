@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -31,7 +32,7 @@ type ChatRoom struct {
 
 type DM struct {
 	Username   string
-	chatRoomId uuid.UUID
+	ChatRoomId uuid.UUID
 }
 
 func NewTurboGuacClient(ctx context.Context, username string, serverAddr string) (*TurboGuacClient, error) {
@@ -185,11 +186,21 @@ func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
 	}
 	for _, dm := range dms {
 		if dm.Username == username {
-			return dm.chatRoomId, nil
+			fmt.Fprintf(os.Stderr, "dm.chatRoomId %s", dm.ChatRoomId.String())
+			return dm.ChatRoomId, nil
 		}
 	}
-	tgc.CreateChatRoom()
-	return uuid.Nil, nil
+	chatRoom, err := tgc.CreateChatRoom()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "CreateChatRoom() failed in go-client\n")
+		return uuid.Nil, err
+	}
+	err = tgc.AddMemberToChatRoom(chatRoom.ID, username)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "AddMemberToChatRoom() failed in go-client\n")
+		return uuid.Nil, err
+	}
+	return chatRoom.ID, nil
 }
 
 func (tgc TurboGuacClient) CreateChatRoom() (*ChatRoom, error) {

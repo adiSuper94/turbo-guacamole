@@ -96,6 +96,10 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.chat = m.(chatModel)
 			}
 		}
+	case OpenChatMsg:
+		t.focucedUI = Chat
+		m, cmd = t.chat.Update(msg)
+		t.chat = m.(chatModel)
 	case OnlineUsersMsg:
 		m, cmd = t.onlineUsers.Update(msg)
 		t.onlineUsers = m.(onlineUserModel)
@@ -129,7 +133,10 @@ func (t turboTUIClient) getNextFocus() UI {
 func initialMainModel() turboTUIClient {
 	var err error
 	t := turboTUIClient{}
-	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), "aditya", "localhost:8080")
+	var username string
+	fmt.Print("Enter your username: ")
+	fmt.Scanln(&username)
+	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), username, "localhost:8080")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewTurboGuacClient() failed in turboTUIClient: \n %v", err)
 		os.Exit(1)

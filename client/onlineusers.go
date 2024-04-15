@@ -66,9 +66,9 @@ func (m onlineUserModel) View() string {
 	s := "Online Users\n\n"
 	for i, user := range m.onlineUsers {
 		if i == m.highlighted {
-			s += fmt.Sprintf(">%s\n", user)
+			s += fmt.Sprintf("> %s\n", user)
 		} else {
-			s += fmt.Sprintf(">  %s\n", user)
+			s += fmt.Sprintf("%s\n", user)
 		}
 	}
 	return s
