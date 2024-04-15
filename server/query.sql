@@ -33,6 +33,6 @@ SELECT chat_rooms.* FROM members
 SELECT * FROM chat_rooms WHERE id = @id;
 
 -- name: GetDMs :many
-SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_room_id FROM members
+SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_room_id AS chat_room_id FROM members
   GROUP BY members.chat_room_id HAVING count(members.username) = 2) AS private_chats
-  INNER JOIN members ON members.chat_room_id = private_chats.room_id WHERE members.username != @username;
+  INNER JOIN members ON members.chat_room_id = private_chats.chat_room_id WHERE members.username != @username;

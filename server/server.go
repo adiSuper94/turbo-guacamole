@@ -36,8 +36,11 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 		fmt.Fprintf(os.Stderr, "Error: Could not get chat_room members\n%v\n", err)
 		return err
 	}
-	var senderUname string
-	var sender ActiveClient
+	senderUname := msg.From
+	sender, ok := s.clients[senderUname]
+	if !ok {
+		return errors.New("you cannot send a message if you are not logged in")
+	}
 	for _, member := range chatMembers {
 		if member.Username == msg.From {
 			ok := false
@@ -292,8 +295,9 @@ func main() {
 			}
 			log.Printf("Received: %s", msg.Data)
 			client, err := server.HandleMessage(msg, ctx, addr, c)
-			server.clients[client.userName] = *client
-			defer delete(server.clients, client.userName)
+			if client != nil {
+				defer delete(server.clients, client.userName)
+			}
 			if err != nil {
 				break
 			}
