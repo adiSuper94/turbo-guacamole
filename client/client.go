@@ -147,6 +147,8 @@ func initialMainModel() turboTUIClient {
 	t.chat = initialChatModel(t.tgc)
 	t.onlineUsers = onlineUserModel{tgc: t.tgc}
 	t.myChatRooms = myChatRoomsModel{tgc: t.tgc}
+	t.wsMessageChan = make(chan turbosdk.IncomingChat)
+	t.cachedChatRooms = CachedChatRooms{ChatRoomMap: map[uuid.UUID]CachedChatRoom{}}
 	return t
 }
 

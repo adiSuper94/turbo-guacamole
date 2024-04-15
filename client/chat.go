@@ -3,7 +3,6 @@ package main
 import (
 	"adisuper94/turboguac/turbosdk"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -38,9 +37,9 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.messages, vpCmd = m.messages.Update(msg)
 	switch msg := msg.(type) {
 	case IncomingChatMsg:
-		log.Println("IncomingChatMsg")
 		if m.activeChat.ID == msg.To {
 			m.messages.SetContent(fmt.Sprintf("%s\n%s: %s", m.messages.View(), msg.From, msg.Message))
+			m.messages.GotoBottom()
 		}
 	case OpenChatMsg:
 		m.activeChat = turbosdk.ChatRoom(msg)
@@ -52,6 +51,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			chatMessage := m.textbox.Value()
 			m.textbox.Reset()
 			m.messages.SetContent(fmt.Sprintf("%s\nYou: %s", m.messages.View(), chatMessage))
+			m.messages.GotoBottom()
 			err := m.tgc.SendMessage(chatMessage, m.activeChat.ID)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "SendMessage() failed in chatModel: \n %v", err)

@@ -23,7 +23,14 @@ func UpdateOnlineUsers(m onlineUserModel) tea.Cmd {
 			fmt.Fprintf(os.Stderr, "GetOnlineUsers() REFRESH failed in onlineUserModel: \n %v", err)
 			return tea.Quit
 		}
-		return OnlineUsersMsg(onlineUsers)
+		onlinUsersExcludingMe := []string{}
+		me := m.tgc.GetUsername()
+		for _, user := range onlineUsers {
+			if user != me {
+				onlinUsersExcludingMe = append(onlinUsersExcludingMe, user)
+			}
+		}
+		return OnlineUsersMsg(onlinUsersExcludingMe)
 	}
 }
 

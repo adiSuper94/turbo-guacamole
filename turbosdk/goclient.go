@@ -54,6 +54,10 @@ func NewTurboGuacClient(ctx context.Context, username string, serverAddr string)
 	return &tgc, nil
 }
 
+func (tgc TurboGuacClient) GetUsername() string {
+	return tgc.username
+}
+
 func (tgc TurboGuacClient) loginOrRegister() error {
 	loginRequest := wsmessagespec.WSMessage{
 		Id:   uuid.New(),
@@ -103,11 +107,11 @@ func (tgc TurboGuacClient) WSListen(channel chan IncomingChat) {
 				Message: wsMsg.Data,
 			}
 			channel <- incomingMsg
-			fmt.Println("Recieved Text")
+			// fmt.Println("Recieved Text")
 		case wsmessagespec.LoginAck:
-			fmt.Println("Recieved Acknowledgement for Login")
+			// fmt.Println("Recieved Acknowledgement for Login")
 		case wsmessagespec.SingleTick:
-			fmt.Println("Recieved SingleTick")
+			// fmt.Println("Recieved SingleTick")
 		}
 	}
 }
@@ -186,7 +190,6 @@ func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
 	}
 	for _, dm := range dms {
 		if dm.Username == username {
-			fmt.Fprintf(os.Stderr, "dm.chatRoomId %s", dm.ChatRoomId.String())
 			return dm.ChatRoomId, nil
 		}
 	}
