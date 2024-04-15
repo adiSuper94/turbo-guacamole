@@ -43,7 +43,7 @@ type turboTUIClient struct {
 	wsMessageChan   chan turbosdk.IncomingChat
 }
 
-func wsListen(t turboTUIClient) tea.Cmd {
+func WsListen(t turboTUIClient) tea.Cmd {
 	return func() tea.Msg {
 		t.tgc.WSListen(t.wsMessageChan)
 		return tea.Quit
@@ -51,26 +51,28 @@ func wsListen(t turboTUIClient) tea.Cmd {
 }
 
 func (t turboTUIClient) Init() tea.Cmd {
-	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init(), wsListen(t), t.readChannel)
+	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init(), WsListen(t), ReadChannel(t))
 }
 
-func (t turboTUIClient) readChannel() tea.Msg {
-	incomingChat := <-t.wsMessageChan
-	chatRoomId := incomingChat.To
-	cachedChatRoom, ok := t.cachedChatRooms.ChatRoomMap[chatRoomId]
-	if !ok {
-		// TODO: Fetch chat room name details from server
-		cachedChatRoom = CachedChatRoom{
-			ChatRoomId:   chatRoomId,
-			ChatRoomName: "Unknown",
-			Messages:     []ChatMessage{},
+func ReadChannel(t turboTUIClient) tea.Cmd {
+	return func() tea.Msg {
+		incomingChat := <-t.wsMessageChan
+		chatRoomId := incomingChat.To
+		cachedChatRoom, ok := t.cachedChatRooms.ChatRoomMap[chatRoomId]
+		if !ok {
+			// TODO: Fetch chat room name details from server
+			cachedChatRoom = CachedChatRoom{
+				ChatRoomId:   chatRoomId,
+				ChatRoomName: "Unknown",
+				Messages:     []ChatMessage{},
+			}
 		}
+		cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
+			From:    incomingChat.From,
+			Message: incomingChat.Message})
+		t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
+		return IncomingChatMsg(incomingChat)
 	}
-	cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
-		From:    incomingChat.From,
-		Message: incomingChat.Message})
-	t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
-	return IncomingChatMsg(incomingChat)
 }
 
 func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -108,7 +110,7 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.myChatRooms = m.(myChatRoomsModel)
 	case IncomingChatMsg:
 		m, cmd = t.chat.Update(msg)
-		cmd = tea.Batch(cmd, t.readChannel)
+		cmd = tea.Batch(cmd, ReadChannel(t))
 		t.chat = m.(chatModel)
 	}
 	return t, cmd

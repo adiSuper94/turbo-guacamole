@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -104,6 +103,7 @@ func (tgc TurboGuacClient) WSListen(channel chan IncomingChat) {
 				Message: wsMsg.Data,
 			}
 			channel <- incomingMsg
+			fmt.Println("Recieved Text")
 		case wsmessagespec.LoginAck:
 			fmt.Println("Recieved Acknowledgement for Login")
 		case wsmessagespec.SingleTick:

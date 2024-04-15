@@ -3,6 +3,7 @@ package main
 import (
 	"adisuper94/turboguac/turbosdk"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -37,6 +38,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.messages, vpCmd = m.messages.Update(msg)
 	switch msg := msg.(type) {
 	case IncomingChatMsg:
+		log.Println("IncomingChatMsg")
 		if m.activeChat.ID == msg.To {
 			m.messages.SetContent(fmt.Sprintf("%s\n%s: %s", m.messages.View(), msg.From, msg.Message))
 		}

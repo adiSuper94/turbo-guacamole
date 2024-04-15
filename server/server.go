@@ -96,7 +96,7 @@ func (s Server) sendMessage(ctx context.Context, msg wsmessagespec.WSMessage) er
 			if err != nil {
 				return errors.New("Could not marshal message")
 			}
-			recipient.conn.Write(context.Background(), websocket.MessageText, bytes)
+			recipient.conn.Write(ctx, websocket.MessageText, bytes)
 			insertMessageDeliveryParams.Delivered = true
 		} else {
 			insertMessageDeliveryParams.Delivered = false
