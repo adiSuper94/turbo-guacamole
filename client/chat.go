@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type chatModel struct {
@@ -66,14 +67,16 @@ func (m chatModel) View() string {
 	return fmt.Sprintf("%s\n\n%s", m.messages.View(), m.textbox.View())
 }
 
-func initialChatModel(tgc *turbosdk.TurboGuacClient) chatModel {
+func initialChatModel(tgc *turbosdk.TurboGuacClient, width int, height int) chatModel {
 	ta := textarea.New()
 	ta.Placeholder = "Type your message here ..."
 	ta.Focus()
-	ta.Prompt = "> "
-	ta.CharLimit = 100
-	ta.SetWidth(70)
+	ta.Prompt = "┃ "
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.CharLimit = 280
+	ta.SetWidth(width)
+	ta.SetHeight(height / 3)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
-	messagesCanvas := viewport.New(180, 8)
+	messagesCanvas := viewport.New(width, 2*height/3)
 	return chatModel{tgc: tgc, textbox: ta, messages: messagesCanvas}
 }

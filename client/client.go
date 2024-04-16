@@ -7,6 +7,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 )
 
@@ -117,7 +118,10 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t turboTUIClient) View() string {
-	return fmt.Sprintf("%s\n%s\n%s", t.onlineUsers.View(), t.myChatRooms.View(), t.chat.View())
+	chatBoxView := t.chat.View()
+	onlineUsersView := t.onlineUsers.View()
+	myChatRoomsView := t.myChatRooms.View()
+	return lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.JoinVertical(lipgloss.Top, onlineUsersView, myChatRoomsView), chatBoxView)
 }
 
 func (t turboTUIClient) getNextFocus() UI {
@@ -144,9 +148,11 @@ func initialMainModel() turboTUIClient {
 		os.Exit(1)
 	}
 	t.focucedUI = Chat
-	t.chat = initialChatModel(t.tgc)
-	t.onlineUsers = InitalOnlineUserModel(t.tgc, 15, 15)
-	t.myChatRooms = InitialMyChatRoomsModel(t.tgc, 15, 15)
+	totalWidth := 50
+	totalHeight := 50
+	t.chat = initialChatModel(t.tgc, 2*totalWidth/3, totalHeight)
+	t.onlineUsers = InitalOnlineUserModel(t.tgc, totalWidth/3, totalHeight/2)
+	t.myChatRooms = InitialMyChatRoomsModel(t.tgc, totalWidth/3, totalHeight/2)
 	t.wsMessageChan = make(chan turbosdk.IncomingChat)
 	t.cachedChatRooms = CachedChatRooms{ChatRoomMap: map[uuid.UUID]CachedChatRoom{}}
 	return t
