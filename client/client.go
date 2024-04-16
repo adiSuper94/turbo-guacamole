@@ -51,6 +51,17 @@ func WsListen(t turboTUIClient) tea.Cmd {
 	}
 }
 
+var (
+	columnStyle = lipgloss.NewStyle().
+		// Padding(1, 2).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("241"))
+	focusedStyle = lipgloss.NewStyle().
+		// Padding(1, 2).
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("41"))
+)
+
 func (t turboTUIClient) Init() tea.Cmd {
 	return tea.Batch(t.chat.Init(), t.onlineUsers.Init(), t.myChatRooms.Init(), WsListen(t), ReadChannel(t))
 }
@@ -81,7 +92,7 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var m tea.Model
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		cmd = t.resizeChat(msg.Width, msg.Height)
+		cmd = t.resizeChat(msg.Width, msg.Height-2)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
@@ -123,6 +134,20 @@ func (t turboTUIClient) View() string {
 	chatBoxView := t.chat.View()
 	onlineUsersView := t.onlineUsers.View()
 	myChatRoomsView := t.myChatRooms.View()
+	switch t.focucedUI {
+	case OnlineUsers:
+		onlineUsersView = focusedStyle.Render(onlineUsersView)
+		myChatRoomsView = columnStyle.Render(myChatRoomsView)
+		chatBoxView = columnStyle.Render(chatBoxView)
+	case MyChatRooms:
+		myChatRoomsView = focusedStyle.Render(myChatRoomsView)
+		onlineUsersView = columnStyle.Render(onlineUsersView)
+		chatBoxView = columnStyle.Render(chatBoxView)
+	case Chat:
+		chatBoxView = focusedStyle.Render(chatBoxView)
+		onlineUsersView = columnStyle.Render(onlineUsersView)
+		myChatRoomsView = columnStyle.Render(myChatRoomsView)
+	}
 	return lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.JoinVertical(lipgloss.Top, onlineUsersView, myChatRoomsView), chatBoxView)
 }
 
