@@ -53,6 +53,9 @@ func (m myChatRoomsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.myChatRooms, cmd = m.myChatRooms.Update(msg)
 	switch msg := msg.(type) {
+	case MyChatRoomsWindowsResizeMsg:
+		m.myChatRooms.SetWidth(msg.Width)
+		m.myChatRooms.SetHeight(msg.Height)
 	case MyChatRoomsMsg:
 		newChatRooms := []list.Item{}
 		for _, chatRoom := range msg {

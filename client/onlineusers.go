@@ -58,6 +58,9 @@ func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.onlineUsers, cmd = m.onlineUsers.Update(msg)
 	switch msg := msg.(type) {
+	case ChatWindowsResizeMsg:
+		m.onlineUsers.SetWidth(msg.Width)
+		m.onlineUsers.SetHeight(msg.Height)
 	case OnlineUsersMsg:
 		onlineUsers := []list.Item{}
 		for _, username := range msg {

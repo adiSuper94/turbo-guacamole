@@ -80,6 +80,8 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var m tea.Model
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		cmd = t.resizeChat(msg.Width, msg.Height)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
@@ -122,6 +124,35 @@ func (t turboTUIClient) View() string {
 	onlineUsersView := t.onlineUsers.View()
 	myChatRoomsView := t.myChatRooms.View()
 	return lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.JoinVertical(lipgloss.Top, onlineUsersView, myChatRoomsView), chatBoxView)
+}
+
+type ChatWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+type OnlineUserWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+type MyChatRoomsWindowsResizeMsg struct {
+	Width  int
+	Height int
+}
+
+func (t turboTUIClient) resizeChat(width, height int) tea.Cmd {
+	return tea.Batch(
+		func() tea.Msg {
+			return ChatWindowsResizeMsg{Width: 2 * width / 3, Height: height}
+		},
+		func() tea.Msg {
+			return OnlineUserWindowsResizeMsg{Width: width / 3, Height: height / 2}
+		},
+		func() tea.Msg {
+			return MyChatRoomsWindowsResizeMsg{Width: width / 3, Height: height / 2}
+		},
+	)
 }
 
 func (t turboTUIClient) getNextFocus() UI {
