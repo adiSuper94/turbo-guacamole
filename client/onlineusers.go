@@ -5,16 +5,32 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type onlineUserModel struct {
 	tgc         *turbosdk.TurboGuacClient
-	onlineUsers []string
-	highlighted int
+	onlineUsers list.Model
 }
 
 type OnlineUsersMsg []string
+
+type OnlineUserItem struct {
+	username string
+}
+
+func (o OnlineUserItem) Title() string {
+	return o.username
+}
+
+func (o OnlineUserItem) FilterValue() string {
+	return o.username
+}
+
+func (o OnlineUserItem) Description() string {
+	return ""
+}
 
 func UpdateOnlineUsers(m onlineUserModel) tea.Cmd {
 	return func() tea.Msg {
@@ -35,48 +51,43 @@ func UpdateOnlineUsers(m onlineUserModel) tea.Cmd {
 }
 
 func (m onlineUserModel) Init() tea.Cmd {
-	m.highlighted = 0
 	return UpdateOnlineUsers(m)
 }
 
 func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	m.onlineUsers, cmd = m.onlineUsers.Update(msg)
 	switch msg := msg.(type) {
 	case OnlineUsersMsg:
-		m.onlineUsers = msg
+		onlineUsers := []list.Item{}
+		for _, username := range msg {
+			onlineUsers = append(onlineUsers, OnlineUserItem{username: username})
+		}
+		cmd = tea.Batch(cmd, m.onlineUsers.SetItems(onlineUsers))
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "j", "down":
-			if m.highlighted < len(m.onlineUsers)-1 {
-				m.highlighted++
-			}
-		case "k", "up":
-			if m.highlighted > 0 {
-				m.highlighted--
-			}
 		case "R":
-			cmd = UpdateOnlineUsers(m)
+			cmd = tea.Batch(cmd, UpdateOnlineUsers(m))
 		case "enter":
-			selectedUser := m.onlineUsers[m.highlighted]
+			selectedUser := m.onlineUsers.SelectedItem().(OnlineUserItem).username
 			chatRoomId, err := m.tgc.StartDM(selectedUser)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "StartDM() failed in onlineUserModel: \n %v", err)
 				return m, tea.Quit
 			}
-			return m, OpenChat(turbosdk.ChatRoom{ID: chatRoomId, Name: selectedUser})
+			return m, tea.Batch(cmd, OpenChat(turbosdk.ChatRoom{ID: chatRoomId, Name: selectedUser}))
 		}
 	}
 	return m, cmd
 }
 
 func (m onlineUserModel) View() string {
-	s := "Online Users\n\n"
-	for i, user := range m.onlineUsers {
-		if i == m.highlighted {
-			s += fmt.Sprintf("> %s\n", user)
-		} else {
-			s += fmt.Sprintf("%s\n", user)
-		}
-	}
-	return s
+	return m.onlineUsers.View()
+}
+
+func InitalOnlineUserModel(tgc *turbosdk.TurboGuacClient, width int, height int) onlineUserModel {
+	m := onlineUserModel{tgc: tgc}
+	m.onlineUsers = list.New([]list.Item{}, list.NewDefaultDelegate(), width, height)
+	m.onlineUsers.Title = "Online Users"
+	return m
 }
