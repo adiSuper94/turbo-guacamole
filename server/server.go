@@ -157,9 +157,9 @@ func (s Server) logout(msg wsmessagespec.WSMessage) {
 	delete(s.clients, userName)
 }
 
-func createChatRoom(ctx context.Context, username string) (*generated.ChatRoom, error) {
+func createChatRoom(ctx context.Context, username string, chatRoomName string) (*generated.ChatRoom, error) {
 	queries := GetQueries()
-	chatRoom, err := queries.InsertChatRoom(ctx, generated.InsertChatRoomParams{})
+	chatRoom, err := queries.InsertChatRoom(ctx, generated.InsertChatRoomParams{Name: chatRoomName})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while creating chatroom\n%v\n", err)
 		return nil, err
@@ -324,7 +324,9 @@ func main() {
 			}
 			json.NewEncoder(w).Encode(chatRooms)
 		case http.MethodPost:
-			chatRoom, err := createChatRoom(r.Context(), r.FormValue("username"))
+			chatRoomName := r.FormValue("chatroom_name")
+			username := r.FormValue("username")
+			chatRoom, err := createChatRoom(r.Context(), username, chatRoomName)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

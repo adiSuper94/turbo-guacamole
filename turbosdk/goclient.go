@@ -193,7 +193,7 @@ func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
 			return dm.ChatRoomId, nil
 		}
 	}
-	chatRoom, err := tgc.CreateChatRoom()
+	chatRoom, err := tgc.CreateChatRoom(username + "&" + tgc.username)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "CreateChatRoom() failed in go-client\n")
 		return uuid.Nil, err
@@ -206,8 +206,8 @@ func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
 	return chatRoom.ID, nil
 }
 
-func (tgc TurboGuacClient) CreateChatRoom() (*ChatRoom, error) {
-	url := fmt.Sprintf("http://%s/chatrooms?username=%s", tgc.serverAddr, tgc.username)
+func (tgc TurboGuacClient) CreateChatRoom(chatRoomName string) (*ChatRoom, error) {
+	url := fmt.Sprintf("http://%s/chatrooms?username=%s&chatroom_name=%s", tgc.serverAddr, tgc.username, chatRoomName)
 	return httpCall[*ChatRoom]("POST", url)
 }
 
