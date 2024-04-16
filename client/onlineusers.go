@@ -92,5 +92,6 @@ func InitalOnlineUserModel(tgc *turbosdk.TurboGuacClient, width int, height int)
 	m := onlineUserModel{tgc: tgc}
 	m.onlineUsers = list.New([]list.Item{}, list.NewDefaultDelegate(), width, height)
 	m.onlineUsers.Title = "Online Users"
+	m.onlineUsers.SetShowHelp(false)
 	return m
 }

@@ -82,5 +82,6 @@ func InitialMyChatRoomsModel(tgc *turbosdk.TurboGuacClient, width int, height in
 	m := myChatRoomsModel{tgc: tgc}
 	m.myChatRooms = list.New([]list.Item{}, list.NewDefaultDelegate(), width, height)
 	m.myChatRooms.Title = "My Chat Rooms"
+	m.myChatRooms.SetShowHelp(false)
 	return m
 }
