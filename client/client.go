@@ -204,8 +204,8 @@ func initialMainModel() turboTUIClient {
 		os.Exit(1)
 	}
 	t.focucedUI = Chat
-	totalWidth := 50
-	totalHeight := 50
+	totalWidth := 100
+	totalHeight := 40
 	t.chat = initialChatModel(t.tgc, 2*totalWidth/3, totalHeight)
 	t.onlineUsers = InitalOnlineUserModel(t.tgc, totalWidth/3, totalHeight/2)
 	t.myChatRooms = InitialMyChatRoomsModel(t.tgc, totalWidth/3, totalHeight/2)
