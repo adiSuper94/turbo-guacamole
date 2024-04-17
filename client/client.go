@@ -126,6 +126,15 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m, cmd = t.chat.Update(msg)
 		cmd = tea.Batch(cmd, ReadChannel(t))
 		t.chat = m.(chatModel)
+	case ChatWindowsResizeMsg:
+		m, cmd = t.chat.Update(msg)
+		t.chat = m.(chatModel)
+	case OnlineUserWindowsResizeMsg:
+		m, cmd = t.onlineUsers.Update(msg)
+		t.onlineUsers = m.(onlineUserModel)
+	case MyChatRoomsWindowsResizeMsg:
+		m, cmd = t.myChatRooms.Update(msg)
+		t.myChatRooms = m.(myChatRoomsModel)
 	}
 	return t, cmd
 }
