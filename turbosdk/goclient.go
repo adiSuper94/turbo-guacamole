@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -193,7 +194,7 @@ func (tgc TurboGuacClient) StartDM(username string) (uuid.UUID, error) {
 			return dm.ChatRoomId, nil
 		}
 	}
-	chatRoom, err := tgc.CreateChatRoom(username + "&" + tgc.username)
+	chatRoom, err := tgc.CreateChatRoom(url.QueryEscape(username + "&" + tgc.username))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "CreateChatRoom() failed in go-client\n")
 		return uuid.Nil, err
