@@ -71,18 +71,12 @@ func ReadChannel(t turboTUIClient) tea.Cmd {
 		incomingChat := <-t.wsMessageChan
 		chatRoomId := incomingChat.To
 		cachedChatRoom, ok := t.cachedChatRooms.ChatRoomMap[chatRoomId]
-		if !ok {
-			// TODO: Fetch chat room name details from server
-			cachedChatRoom = CachedChatRoom{
-				ChatRoomId:   chatRoomId,
-				ChatRoomName: "Unknown",
-				Messages:     []ChatMessage{},
-			}
+		if ok {
+			cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
+				From:    incomingChat.From,
+				Message: incomingChat.Message})
+			t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
 		}
-		cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{
-			From:    incomingChat.From,
-			Message: incomingChat.Message})
-		t.cachedChatRooms.ChatRoomMap[chatRoomId] = cachedChatRoom
 		return IncomingChatMsg(incomingChat)
 	}
 }
@@ -123,9 +117,18 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m, cmd = t.myChatRooms.Update(msg)
 		t.myChatRooms = m.(myChatRoomsModel)
 	case IncomingChatMsg:
+		_, ok := t.cachedChatRooms.ChatRoomMap[msg.To]
+		var updateCmd tea.Cmd
+		if !ok {
+			updateCmd = tea.Batch(UpdateMyChatRooms(t.myChatRooms), UpdateOnlineUsers(t.onlineUsers))
+			cachedChatRoom := CachedChatRoom{ChatRoomId: msg.To, Messages: []ChatMessage{}}
+			cachedChatRoom.Messages = append(cachedChatRoom.Messages, ChatMessage{From: msg.From, Message: msg.Message})
+			t.cachedChatRooms.ChatRoomMap[msg.To] = cachedChatRoom
+		}
 		m, cmd = t.chat.Update(msg)
 		cmd = tea.Batch(cmd, ReadChannel(t))
 		t.chat = m.(chatModel)
+		cmd = tea.Batch(cmd, updateCmd)
 	case ChatWindowsResizeMsg:
 		m, cmd = t.chat.Update(msg)
 		t.chat = m.(chatModel)
