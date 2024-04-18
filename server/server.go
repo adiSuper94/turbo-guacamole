@@ -2,6 +2,7 @@ package main
 
 import (
 	"adisuper94/turboguac/server/generated"
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -347,5 +348,32 @@ func main() {
 		json.NewEncoder(w).Encode(dms)
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	httpServer := &http.Server{
+		Addr:    ":8080",
+		Handler: nil,
+	}
+	log.Fatal(httpServer.ListenAndServe())
+}
+
+func askQuestion(question string) bool {
+	fmt.Printf("%s (y/N)?", question)
+	var isHttps bool
+	stdinReader := bufio.NewReader(os.Stdin)
+Loop:
+	for {
+		byte, _ := stdinReader.ReadByte()
+		switch byte {
+		case 'y', 'Y':
+			isHttps = true
+			break Loop
+		case 'n', 'N':
+			isHttps = false
+			break Loop
+		case '\n', '\r', ' ':
+			continue
+		default:
+			fmt.Println("Please enter y or n")
+		}
+	}
+	return isHttps
 }

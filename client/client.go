@@ -223,9 +223,13 @@ func initialMainModel() turboTUIClient {
 	var err error
 	t := turboTUIClient{}
 	var username string
+	fmt.Println("Welcome to TurboGuac!")
+	fmt.Println("Please enter tubroguac server address: ")
+	var serverAddress string
+	fmt.Scanln(&serverAddress)
 	fmt.Print("Enter your username: ")
 	fmt.Scanln(&username)
-	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), username, "localhost:8080")
+	t.tgc, err = turbosdk.NewTurboGuacClient(context.Background(), username, serverAddress)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NewTurboGuacClient() failed in turboTUIClient: \n %v", err)
 		os.Exit(1)
