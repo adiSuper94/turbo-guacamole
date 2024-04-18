@@ -108,11 +108,8 @@ func (tgc TurboGuacClient) WSListen(channel chan IncomingChat) {
 				Message: wsMsg.Data,
 			}
 			channel <- incomingMsg
-			// fmt.Println("Recieved Text")
 		case wsmessagespec.LoginAck:
-			// fmt.Println("Recieved Acknowledgement for Login")
 		case wsmessagespec.SingleTick:
-			// fmt.Println("Recieved SingleTick")
 		}
 	}
 }
@@ -135,7 +132,6 @@ func (tgc TurboGuacClient) Logout() error {
 
 func (tgc TurboGuacClient) SendMessage(data string, toChatRoomId uuid.UUID) error {
 	if toChatRoomId == uuid.Nil {
-		// fmt.Fprintf(os.Stderr, "cannot call SendMessage() go-client if toChatRoomId is nil\n")
 		return nil
 	}
 	message := wsmessagespec.WSMessage{

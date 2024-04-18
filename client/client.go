@@ -81,12 +81,25 @@ func ReadChannel(t turboTUIClient) tea.Cmd {
 	}
 }
 
+type AddMemberToChatRoomMsg string
+
+func AddMemberToChatRoom(t turboTUIClient, username string) tea.Cmd {
+	return func() tea.Msg {
+		err := t.tgc.AddMemberToChatRoom(t.chat.activeChat.ID, username)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "AddUserToChatRoom() failed in myChatRoomsModel: \n %v", err)
+			return nil
+		}
+		return tea.Batch(UpdateMyChatRooms(t.myChatRooms), UpdateOnlineUsers(t.onlineUsers))
+	}
+}
+
 func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var m tea.Model
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		cmd = t.resizeChat(msg.Width, msg.Height-2)
+		cmd = t.resizeChat(msg.Width, msg.Height-5)
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
@@ -116,6 +129,8 @@ func (t turboTUIClient) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MyChatRoomsMsg:
 		m, cmd = t.myChatRooms.Update(msg)
 		t.myChatRooms = m.(myChatRoomsModel)
+	case AddMemberToCurrRoomMsg:
+		cmd = AddMemberToChatRoom(t, string(msg))
 	case IncomingChatMsg:
 		_, ok := t.cachedChatRooms.ChatRoomMap[msg.To]
 		var updateCmd tea.Cmd

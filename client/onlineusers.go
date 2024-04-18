@@ -54,6 +54,19 @@ func (m onlineUserModel) Init() tea.Cmd {
 	return UpdateOnlineUsers(m)
 }
 
+type AddMemberToCurrRoomMsg string
+
+func AddMemberToCurrRoom(m onlineUserModel) tea.Cmd {
+	return func() tea.Msg {
+		selectedUser := m.onlineUsers.SelectedItem()
+		if selectedUser == nil {
+			return nil
+		}
+		username := selectedUser.(OnlineUserItem).username
+		return AddMemberToCurrRoomMsg(username)
+	}
+}
+
 func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.onlineUsers, cmd = m.onlineUsers.Update(msg)
@@ -71,6 +84,8 @@ func (m onlineUserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "R":
 			cmd = tea.Batch(cmd, UpdateOnlineUsers(m))
+		case "A":
+			cmd = tea.Batch(cmd, AddMemberToCurrRoom(m))
 		case "enter":
 			selectedUser := m.onlineUsers.SelectedItem().(OnlineUserItem).username
 			chatRoomId, err := m.tgc.StartDM(selectedUser)
