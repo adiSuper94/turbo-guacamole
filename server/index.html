@@ -1,0 +1,60 @@
+{{ block "index" . }}
+<html>
+  <!DOCTYPE html>
+  <head lang="en">
+    <title>Client</title>
+    <meta charset="UTF-8" />
+    <meta name = "viewport" content = "width = device-width, initial-scale = 1" />
+    <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="left-pane">
+        <div id="online-users">
+          {{template "online-users" . }}
+        </div>
+        <div id="active-chat-rooms">
+          {{ template "active-chat-rooms" . }}
+        </div>
+      </div>
+      <div id="right-pane">
+        <div id="chat-messages">
+          {{ template "chat-messages" . }}
+        </div>
+        <div id="chat-input">
+          <input type="textarea" id="chat-input-text" />
+          <button id="chat-input-send">Send</button>
+        </div>
+    </div>
+  </body>
+</html>
+{{ end }}
+
+{{ block "online-users" . }}
+<h2>Online Users</h2>
+<ul>
+  {{ range .OnlineUsers }}
+    <li>{{ . }}</li>
+  {{ end }}
+</ul>
+{{ end }}
+
+{{ block "active-chat-rooms" .}}
+<h2>Active Chat Rooms</h2>
+<ul>
+  {{ range .ActiveChatRooms }}
+    <li>{{ . }}</li>
+  {{ end }}
+</ul>
+{{ end }}
+
+{{ block "chat-messages" . }}
+<h2>Chat Messages</h2>
+<ul>
+  {{ range .ChatMessages }}
+    <li>{{ . }}</li>
+  {{ end }}
+</ul>
+{{ end }}
+

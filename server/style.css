@@ -1,0 +1,39 @@
+#online-users, #active-chat-rooms, #chat-messages, #chat-input {
+  border: 1px solid black;
+  
+}
+#app{
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  & #left-pane {
+    width: 25%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
+    & #online-users {
+      height: 50%;
+    }
+    & #active-chat-rooms {
+      height: 50%;
+    }
+  }
+  
+  & #right-pane {
+    width: 75%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
+    & #chat-messages {
+      height: 80%;
+    }
+    
+    & #chat-input{
+      height: 20%;
+    }
+  }
+}
