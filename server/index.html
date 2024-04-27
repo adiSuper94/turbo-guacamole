@@ -43,8 +43,8 @@
 {{ block "active-chat-rooms" .}}
 <h2>Active Chat Rooms</h2>
 <ul>
-  {{ range .ActiveChatRooms }}
-    <li>{{ . }}</li>
+  {{ range . }}
+    <li>{{ .Name }}</li>
   {{ end }}
 </ul>
 {{ end }}

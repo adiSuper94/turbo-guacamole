@@ -85,17 +85,22 @@ func main() {
 		}
 		if getAcceptHeader(r) == HTML {
 			hbs.ExecuteTemplate(os.Stdin, "online-users", Obj{OnlineUsers: activeUsers})
-		} else {
-			json.NewEncoder(w).Encode(activeUsers)
+			return
 		}
+		json.NewEncoder(w).Encode(activeUsers)
 	})
 
 	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
+    fmt.Println("Chatrooms")
 		switch r.Method {
 		case http.MethodGet:
 			chatRooms, err := getChatRooms(r.Context(), r.FormValue("username"))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if getAcceptHeader(r) == HTML {
+				hbs.ExecuteTemplate(os.Stdin, "active-chat-rooms", chatRooms)
 				return
 			}
 			json.NewEncoder(w).Encode(chatRooms)
