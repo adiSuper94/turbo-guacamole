@@ -1,61 +1,80 @@
-{{ block "index" . }}
 <html>
   <!DOCTYPE html>
   <head lang="en">
     <title>Client</title>
     <meta charset="UTF-8" />
     <meta name = "viewport" content = "width = device-width, initial-scale = 1" />
-    <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.10.5/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="app">
-      <div id="left-pane">
-        <div id="online-users">
-          {{template "online-users" . }}
+    <div class="frame app-header">
+      <p class="text-2xl">Turbo Guac</p>
+    </div>
+    <!-- frame: Group -->
+    <div class="frame app-body">
+      <!-- frame: Side Bar -->
+      <div class="frame contact-group">
+        <!-- rect: Online Users -->
+        <div class="shape rect online-users  overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Online Users</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class = "hover">
+                <td>Prajit</td>
+              </tr>
+              <tr class="hover">
+                <td>Arun</td>
+              </tr>
+              <tr class = "hover">
+                <td>Haroon</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div id="active-chat-rooms">
-          {{ template "active-chat-rooms" . }}
+        <!-- rect: Chat Rooms -->
+        <div class="shape rect chat-rooms overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th><b>Chat Rooms</b></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class = "hover bg-base-200">
+                <td>Batman</td>
+              </tr>
+              <tr class="hover">
+                <td>SV & Hari & Adi</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div id="right-pane" hx-ext="ws" ws-connect="/ws">
-        <div id="chat-messages">
-          {{ template "chat-messages" . }}
+      <!-- frame: Chat -->
+      <div class="frame chat-group">
+        <!-- rect: Chats -->
+        <div class="shape rect chats overflow-x-auto">
+          <div class="chat chat-start">
+            <div class="chat-bubble">It's over Anakin, <br/>I have the high ground.</div>
+          </div>
+          <div class="chat chat-end">
+            <div class="chat-bubble">You underestimate my power!</div>
+          </div>
         </div>
-        <div id="chat-input">
-          <input type="textarea" id="chat-input-text" />
-          <button id="chat-input-send">Send</button>
+        <!-- rect: Input -->
+        <div class="shape rect message-input join">
+          <textarea class = "textarea textarea-bordered join-item"></textarea>
+          <button class = "btn join-item">Send</button>
         </div>
+      </div>
     </div>
   </body>
 </html>
-{{ end }}
 
-{{ block "online-users" . }}
-<h2>Online Users</h2>
-<ul>
-  {{ range . }}
-    <li>{{ . }}</li>
-  {{ end }}
-</ul>
-{{ end }}
-
-{{ block "active-chat-rooms" .}}
-<h2>Active Chat Rooms</h2>
-<ul>
-  {{ range . }}
-    <li>{{ .Name }}</li>
-  {{ end }}
-</ul>
-{{ end }}
-
-{{ block "chat-messages" . }}
-<h2>Chat Messages</h2>
-<ul>
-  {{ range .ChatMessages }}
-    <li>{{ . }}</li>
-  {{ end }}
-</ul>
-{{ end }}
 
