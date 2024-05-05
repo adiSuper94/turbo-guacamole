@@ -36,7 +36,7 @@ type DM struct {
 }
 
 func NewTurboGuacClient(ctx context.Context, username string, serverAddr string) (*TurboGuacClient, error) {
-	conn, _, err := websocket.Dial(ctx, "ws://"+serverAddr, nil)
+	conn, _, err := websocket.Dial(ctx, "ws://"+serverAddr+"/ws", nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "websocket.Dial: %v\n", err)
 		os.Exit(1)

@@ -38,7 +38,7 @@ func main() {
 		clients: make(map[string]ActiveClient),
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error1: ", err)
@@ -75,16 +75,13 @@ func main() {
 		c.Close(websocket.StatusNormalClosure, "")
 	})
 
-	type Obj struct {
-		OnlineUsers []string
-	}
 	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
 		var activeUsers []string
 		for k := range server.clients {
 			activeUsers = append(activeUsers, k)
 		}
 		if getAcceptHeader(r) == HTML {
-			hbs.ExecuteTemplate(os.Stdin, "online-users", Obj{OnlineUsers: activeUsers})
+			hbs.ExecuteTemplate(os.Stdin, "online-users",  activeUsers)
 			return
 		}
 		json.NewEncoder(w).Encode(activeUsers)
