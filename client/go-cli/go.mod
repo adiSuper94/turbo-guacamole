@@ -32,6 +32,6 @@ require (
 	nhooyr.io/websocket v1.8.11 // indirect
 )
 
-replace adisuper94/turboguac/wsmessagespec => ../wsmessagespec
+replace adisuper94/turboguac/wsmessagespec => ../../wsmessagespec
 
-replace adisuper94/turboguac/turbosdk => ../turbosdk
+replace adisuper94/turboguac/turbosdk => ../../turbosdk/go
