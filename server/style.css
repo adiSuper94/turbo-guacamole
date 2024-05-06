@@ -8,9 +8,14 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  width: 100vw;
-  min-height: 100vh;
+  width: 100%;
+  min-height: 100%;
   row-gap: 2em;
 }
 

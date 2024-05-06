@@ -1,33 +1,67 @@
-import { createSignal } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = createSignal(0)
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={solidLogo} class="logo solid" alt="Solid logo" />
-        </a>
+    <div class="frame navbar app-header">
+      <p class="text-2xl">🐌 Turbo Guac 🥑</p>
+    </div>
+    <div class="frame app-body">
+      <div class="frame contact-group">
+        <div class="shape rect online-users  overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="background:rgba(0, 0, 0, 0.3)">Online Users</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class = "hover">
+                <td>Prajit</td>
+              </tr>
+              <tr class="hover">
+                <td>Arun</td>
+              </tr>
+              <tr class = "hover">
+                <td>Haroon</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="shape rect chat-rooms overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="background:rgba(0, 0, 0, 0.3)">Chat Rooms</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class = "hover bg-base-200">
+                <td>Batman</td>
+              </tr>
+              <tr class="hover">
+                <td>SV & Hari & Adi</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <h1>Vite + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count()}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+      <div class="frame chat-group">
+        <div class="shape rect chats overflow-x-auto">
+          <div class="chat chat-start">
+            <div class="chat-bubble">It's over Anakin, <br/>I have the high ground.</div>
+          </div>
+          <div class="chat chat-end">
+            <div class="chat-bubble">You underestimate my power!</div>
+          </div>
+        </div>
+        <div class="shape rect message-input join">
+          <textarea class = "textarea textarea-bordered join-item"></textarea>
+          <button class = "btn join-item">Send</button>
+        </div>
       </div>
-      <p class="read-the-docs">
-        Click on the Vite and Solid logos to learn more
-      </p>
+    </div>
     </>
   )
 }
