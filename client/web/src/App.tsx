@@ -4,12 +4,12 @@ function App() {
 
   return (
     <>
-    <div class="frame navbar app-header">
+    <div class="navbar app-header">
       <p class="text-2xl">🐌 Turbo Guac 🥑</p>
     </div>
-    <div class="frame app-body">
-      <div class="frame contact-group">
-        <div class="shape rect online-users  overflow-x-auto">
+    <div class="app-body">
+      <div class="contact-group">
+        <div class="online-users overflow-x-auto">
           <table class="table">
             <thead>
               <tr>
@@ -29,7 +29,7 @@ function App() {
             </tbody>
           </table>
         </div>
-        <div class="shape rect chat-rooms overflow-x-auto">
+        <div class="chat-rooms overflow-x-auto">
           <table class="table">
             <thead>
               <tr>
@@ -47,8 +47,8 @@ function App() {
           </table>
         </div>
       </div>
-      <div class="frame chat-group">
-        <div class="shape rect chats overflow-x-auto">
+      <div class="chat-group">
+        <div class="chats overflow-x-auto">
           <div class="chat chat-start">
             <div class="chat-bubble">It's over Anakin, <br/>I have the high ground.</div>
           </div>
@@ -56,7 +56,7 @@ function App() {
             <div class="chat-bubble">You underestimate my power!</div>
           </div>
         </div>
-        <div class="shape rect message-input join">
+        <div class="message-input join">
           <textarea class = "textarea textarea-bordered join-item"></textarea>
           <button class = "btn join-item">Send</button>
         </div>
