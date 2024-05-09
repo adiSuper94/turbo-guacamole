@@ -1,67 +1,56 @@
 import './App.css'
+import ContactGroup from "./ContactGroup"
+import ChatGroup from "./ChatGroup"
+import { onMount } from 'solid-js';
+
+function isConnected(_serverUrl: string): boolean {
+  return true;
+}
 
 function App() {
+  // const [serverUrl, setServerUrl] = createSignal("");
+  // const [_connected, setConnected] = createSignal(false);
+
+  onMount(function() {
+    const modal = document.getElementById('input_modal') as HTMLDialogElement;
+    modal.showModal();
+    console.log('modal', modal);
+    modal.addEventListener("close", function(e) {
+      console.log('closed', e);
+      const serverUrl = (document.getElementById('server-addr') as HTMLInputElement).value;
+      if (isConnected(serverUrl)) {
+        console.log('connected');
+        // setConnected(true);
+      } else {
+        console.log('not connected');
+        modal.showModal();
+      }
+    });
+  });
 
   return (
     <>
-    <div class="navbar app-header">
-      <p class="text-2xl">🐌 Turbo Guac 🥑</p>
-    </div>
-    <div class="app-body">
-      <div class="contact-group">
-        <div class="online-users overflow-x-auto">
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="background:rgba(0, 0, 0, 0.3)">Online Users</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class = "hover">
-                <td>Prajit</td>
-              </tr>
-              <tr class="hover">
-                <td>Arun</td>
-              </tr>
-              <tr class = "hover">
-                <td>Haroon</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="chat-rooms overflow-x-auto">
-          <table class="table">
-            <thead>
-              <tr>
-                <th style="background:rgba(0, 0, 0, 0.3)">Chat Rooms</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class = "hover bg-base-200">
-                <td>Batman</td>
-              </tr>
-              <tr class="hover">
-                <td>SV & Hari & Adi</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="navbar app-header">
+        <p class="text-2xl">🐌 Turbo Guac 🥑</p>
       </div>
-      <div class="chat-group">
-        <div class="chats overflow-x-auto">
-          <div class="chat chat-start">
-            <div class="chat-bubble">It's over Anakin, <br/>I have the high ground.</div>
-          </div>
-          <div class="chat chat-end">
-            <div class="chat-bubble">You underestimate my power!</div>
+      <dialog id="input_modal" class="modal">
+        <div class="modal-box">
+          <h3 class="font-bold text-lg">Enter Chat Server address</h3>
+          <p class="py-4">Enter Chat Server address</p>
+          <label class="input input-bordered flex items-center gap-2">
+            <input id="server-addr" type="text" class="grow" placeholder="https://localhost:8080" />
+          </label>
+          <div class="modal-action">
+            <form method="dialog">
+              <button class="btn">Enter</button>
+            </form>
           </div>
         </div>
-        <div class="message-input join">
-          <textarea class = "textarea textarea-bordered join-item"></textarea>
-          <button class = "btn join-item">Send</button>
-        </div>
+      </dialog>
+      <div class="app-body">
+        <ContactGroup />
+        <ChatGroup />
       </div>
-    </div>
     </>
   )
 }
