@@ -17,6 +17,18 @@ export type WSMessage = {
   type: WSMessageType;
 }
 
+export type ChatRoom = {
+  id: string;
+  name: string;
+  createdAt: Date
+  modifiedAr: Date
+}
+
+export type DM = {
+  userName: string;
+  chatRoomId: string;
+}
+
 export class TurboGuacClient {
   private ws: WebSocket
   private userName: string
@@ -37,7 +49,6 @@ export class TurboGuacClient {
     const url = `http://${this.serverAddr}/chatrooms?username=${this.userName}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
     return response;
-
   }
 
   async getOnlineUsers() {

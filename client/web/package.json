@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "solid-js": "^1.8.15"
+    "solid-js": "^1.8.15",
+    "turbosdk-js": "file:../../turbosdk/js"
   },
   "devDependencies": {
     "daisyui": "^4.10.5",

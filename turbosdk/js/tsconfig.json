@@ -6,8 +6,10 @@
     "moduleResolution": "nodenext",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
     "outDir": "dist"
   },
-  "include": ["lib"]
+  "include": ["src"]
 }

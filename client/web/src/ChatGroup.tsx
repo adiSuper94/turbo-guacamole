@@ -1,4 +1,4 @@
-function ChatGroup(){
+export function ChatGroup(){
   return (
     <>
       <div class="chat-group">
@@ -18,4 +18,3 @@ function ChatGroup(){
     </>
   );
 }
-export default ChatGroup;
