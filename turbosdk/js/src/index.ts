@@ -10,35 +10,64 @@ export enum WSMessageType {
 }
 
 export type WSMessage = {
-  id: string;
-  data: string;
-  to: string;
-  from: string;
-  type: WSMessageType;
+  Id: string;
+  Data: string;
+  To: string;
+  From: string;
+  Type: WSMessageType;
 }
 
 export type ChatRoom = {
-  id: string;
-  name: string;
-  createdAt: Date
-  modifiedAr: Date
+  Id: string;
+  Name: string;
+  CreatedAt: Date
+  ModifiedAt: Date
 }
 
 export type DM = {
-  userName: string;
-  chatRoomId: string;
+  UserName: string;
+  ChatRoomId: string;
 }
+
+export const NilUUID = "00000000-0000-0000-0000-000000000000";
 
 export class TurboGuacClient {
   private ws: WebSocket
   private userName: string
   private serverAddr: string
 
-  constructor(serverAddr: string, userName: string) {
+  private constructor(serverAddr: string, userName: string) {
     this.serverAddr = serverAddr;
     this.userName = userName;
     this.ws = new WebSocket("ws://" + serverAddr + "/ws");
   }
+
+  static async createClient(serverAddr: string, userName: string) {
+    const tgc = new TurboGuacClient(serverAddr, userName);
+    let p = new Promise((resolve, reject) => {
+      tgc.ws.addEventListener("open", resolve, { once: true });
+      tgc.ws.addEventListener("error", reject, { once: true });
+    });
+    await p;
+    tgc.loginOrRegister();
+    return tgc;
+  }
+
+  private loginOrRegister() {
+    const loginRequest: WSMessage = {
+      Id: crypto.randomUUID(),
+      Data: "login",
+      To: NilUUID,
+      Type: WSMessageType.Login,
+      From: this.userName
+    };
+    this.sendWSMessage(loginRequest);
+  }
+
+  private sendWSMessage(message: WSMessage) {
+    this.ws.send(JSON.stringify(message));
+  }
+
   async createChatRoom(roomName: string) {
     const url = `http://${this.serverAddr}/chatrooms?username=${this.userName}&chatroom_name=${roomName}`;
     let response = await fetch(url, { method: "POST", headers: { "Accept": "application/json" } });

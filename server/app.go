@@ -51,7 +51,7 @@ func main() {
 		defer c.CloseNow()
 		addr := r.RemoteAddr
 		log.Printf("Client connected: %s", addr)
-		ctx, cancel := context.WithTimeout(r.Context(), 360*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Minute)
 		defer cancel()
 		defer delete(server.clients, addr)
 		for {
@@ -81,6 +81,7 @@ func main() {
 
 	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
+    fmt.Println("Online Users")
 		var activeUsers []string
 		for k := range server.clients {
 			activeUsers = append(activeUsers, k)

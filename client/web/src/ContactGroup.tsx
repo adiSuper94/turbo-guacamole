@@ -37,7 +37,7 @@ export function ContactGroup(propArgs: Props) {
             <tbody>
               <For each={props.myChatRooms}>{(myChatRoom, _i) =>
                 <tr class="hover bg-base-200">
-                  <td>{myChatRoom.name}</td>
+                  <td>{myChatRoom.Name}</td>
                 </tr>
               }
               </For>

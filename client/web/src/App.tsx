@@ -7,20 +7,17 @@ import { ChatRoom, TurboGuacClient } from "turbosdk-js"
 
 function App() {
   let tgc: TurboGuacClient | null;
-  let serverUrl;
   let [onlineUsers, setOnlineUsers] = createSignal<string[]>();
   let [activeChatRooms, setActiveChatRooms] = createSignal<ChatRoom[]>();
 
   async function tryConnect(serverURL: string, userName: string) {
     if (tgc) return true;
-    serverUrl = serverURL;
     try {
-      tgc = new TurboGuacClient(serverUrl, userName);
+      tgc = await TurboGuacClient.createClient(serverURL, userName);
       let onlineUzers = await tgc.getOnlineUsers();
+      setOnlineUsers(onlineUzers);
       let activeRooms = await tgc.getMyChatRooms();
       setActiveChatRooms(activeRooms);
-      console.log(onlineUzers);
-      setOnlineUsers(onlineUzers);
     }
     catch (e) {
       console.log("Erro while establishing websocket connection", e);
@@ -37,7 +34,6 @@ function App() {
       const serverUrl = (document.getElementById('server-addr') as HTMLInputElement).value;
       const userName = (document.getElementById('username') as HTMLInputElement).value;
       if (await tryConnect(serverUrl, userName)) {
-        console.log('connected');
       } else {
         modal.showModal();
       }
@@ -68,7 +64,7 @@ function App() {
         </div>
       </dialog>
       <div class="app-body">
-        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={activeChatRooms()}/>
+        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={activeChatRooms()} />
         <ChatGroup />
       </div>
     </>
