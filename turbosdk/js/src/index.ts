@@ -48,18 +48,22 @@ export class TurboGuacClient {
   async getMyChatRooms() {
     const url = `http://${this.serverAddr}/chatrooms?username=${this.userName}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
-    return response;
+    let data: ChatRoom[] = await response.json();
+    return data;
+
   }
 
-  async getOnlineUsers() {
+  async getOnlineUsers(): Promise<string[]> {
     const url = `http://${this.serverAddr}/online-users`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
-    return response;
+    const data = await response.json();
+    return data;
   }
 
   async getDMs() {
     const url = `http://${this.serverAddr}/dms?username=${this.userName}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
-    return response;
+    let data: DM[] = await response.json();
+    return data;
   }
 }

@@ -1,4 +1,12 @@
-function ContactGroup() {
+import { For, mergeProps } from "solid-js";
+import { ChatRoom } from "turbosdk-js";
+
+interface Props {
+  onlineUsers: string[] | undefined;
+  myChatRooms: ChatRoom[] | undefined;
+}
+export function ContactGroup(propArgs: Props) {
+  const props = mergeProps({ onlineUsers: [], myChatRooms: [] }, propArgs);
   return (
     <>
       <div class="contact-group">
@@ -10,15 +18,12 @@ function ContactGroup() {
               </tr>
             </thead>
             <tbody>
-              <tr class="hover">
-                <td>Prajit</td>
-              </tr>
-              <tr class="hover">
-                <td>Arun</td>
-              </tr>
-              <tr class="hover">
-                <td>Haroon</td>
-              </tr>
+              <For each={props.onlineUsers}>{(onlineUser, _i) =>
+                <tr class="hover">
+                  <td>{onlineUser}</td>
+                </tr>
+              }
+              </For>
             </tbody>
           </table>
         </div>
@@ -30,12 +35,12 @@ function ContactGroup() {
               </tr>
             </thead>
             <tbody>
-              <tr class="hover bg-base-200">
-                <td>Batman</td>
-              </tr>
-              <tr class="hover">
-                <td>SV & Hari & Adi</td>
-              </tr>
+              <For each={props.myChatRooms}>{(myChatRoom, _i) =>
+                <tr class="hover bg-base-200">
+                  <td>{myChatRoom.name}</td>
+                </tr>
+              }
+              </For>
             </tbody>
           </table>
         </div>

@@ -30,6 +30,9 @@ func getChatRooms(ctx context.Context, username string) ([]generated.ChatRoom, e
 
 var hbs *template.Template
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
 func main() {
 	hbs = template.Must(template.ParseGlob("*.html"))
 	conn := getDBConn()
@@ -39,6 +42,7 @@ func main() {
 	}
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error1: ", err)
@@ -76,19 +80,21 @@ func main() {
 	})
 
 	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
 		var activeUsers []string
 		for k := range server.clients {
 			activeUsers = append(activeUsers, k)
 		}
 		if getAcceptHeader(r) == HTML {
-			hbs.ExecuteTemplate(os.Stdin, "online-users",  activeUsers)
+			hbs.ExecuteTemplate(os.Stdin, "online-users", activeUsers)
 			return
 		}
 		json.NewEncoder(w).Encode(activeUsers)
 	})
 
 	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
-    fmt.Println("Chatrooms")
+		enableCors(&w)
+		fmt.Println("Chatrooms")
 		switch r.Method {
 		case http.MethodGet:
 			chatRooms, err := getChatRooms(r.Context(), r.FormValue("username"))
@@ -114,6 +120,7 @@ func main() {
 	})
 
 	http.HandleFunc("/dms", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
 		queries := GetQueries()
 		username := r.FormValue("username")
 		dms, err := queries.GetDMs(r.Context(), username)

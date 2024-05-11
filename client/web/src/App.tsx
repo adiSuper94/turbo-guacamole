@@ -1,33 +1,44 @@
 import './App.css'
-import ContactGroup from "./ContactGroup"
+import { ContactGroup } from "./ContactGroup"
 import { ChatGroup } from "./ChatGroup"
-import { onMount } from 'solid-js';
-import { TurboGuacClient } from "turbosdk-js"
+import { createSignal, onMount } from 'solid-js';
+import { ChatRoom, TurboGuacClient } from "turbosdk-js"
 
 
 function App() {
-  let tgc: TurboGuacClient;
+  let tgc: TurboGuacClient | null;
   let serverUrl;
+  let [onlineUsers, setOnlineUsers] = createSignal<string[]>();
+  let [activeChatRooms, setActiveChatRooms] = createSignal<ChatRoom[]>();
 
-  function tryConnect(serverURL: string, userName: string): boolean {
+  async function tryConnect(serverURL: string, userName: string) {
     if (tgc) return true;
     serverUrl = serverURL;
-    tgc = new TurboGuacClient(serverUrl, userName);
+    try {
+      tgc = new TurboGuacClient(serverUrl, userName);
+      let onlineUzers = await tgc.getOnlineUsers();
+      let activeRooms = await tgc.getMyChatRooms();
+      setActiveChatRooms(activeRooms);
+      console.log(onlineUzers);
+      setOnlineUsers(onlineUzers);
+    }
+    catch (e) {
+      console.log("Erro while establishing websocket connection", e);
+      tgc = null;
+      return false;
+    }
     return true;
   }
 
-  onMount(function() {
+  onMount(async function() {
     const modal = document.getElementById('input_modal') as HTMLDialogElement;
     modal.showModal();
-    console.log('modal', modal);
-    modal.addEventListener("close", function(e) {
-      console.log('closed', e);
+    modal.addEventListener("close", async function(_e) {
       const serverUrl = (document.getElementById('server-addr') as HTMLInputElement).value;
       const userName = (document.getElementById('username') as HTMLInputElement).value;
-      if (tryConnect(serverUrl, userName)) {
+      if (await tryConnect(serverUrl, userName)) {
         console.log('connected');
       } else {
-        console.log('not connected');
         modal.showModal();
       }
     });
@@ -57,7 +68,7 @@ function App() {
         </div>
       </dialog>
       <div class="app-body">
-        <ContactGroup />
+        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={activeChatRooms()}/>
         <ChatGroup />
       </div>
     </>
