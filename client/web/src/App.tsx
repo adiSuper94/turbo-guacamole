@@ -6,22 +6,24 @@ import { ChatRoom, TurboGuacClient } from "turbosdk-js"
 
 
 function App() {
-  let tgc: TurboGuacClient | null;
-  let [onlineUsers, setOnlineUsers] = createSignal<string[]>();
-  let [activeChatRooms, setActiveChatRooms] = createSignal<ChatRoom[]>();
+  const [tgc, setTgc] = createSignal<TurboGuacClient>();
+  const [onlineUsers, setOnlineUsers] = createSignal<string[]>();
+  const [myChatRooms, setMyChatRooms] = createSignal<ChatRoom[]>();
+  const [activeChatId, setActiveChatId] = createSignal<string>();
 
   async function tryConnect(serverURL: string, userName: string) {
-    if (tgc) return true;
+    if (tgc()) return true;
     try {
-      tgc = await TurboGuacClient.createClient(serverURL, userName);
-      let onlineUzers = await tgc.getOnlineUsers();
+      const newTgc = await TurboGuacClient.createClient(serverURL, userName);
+      setTgc(newTgc);
+      let onlineUzers = await tgc()!.getOnlineUsers();
       setOnlineUsers(onlineUzers);
-      let activeRooms = await tgc.getMyChatRooms();
-      setActiveChatRooms(activeRooms);
+      let activeRooms = await tgc()!.getMyChatRooms();
+      setMyChatRooms(activeRooms);
     }
     catch (e) {
       console.log("Erro while establishing websocket connection", e);
-      tgc = null;
+      setTgc(undefined);
       return false;
     }
     return true;
@@ -64,8 +66,8 @@ function App() {
         </div>
       </dialog>
       <div class="app-body">
-        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={activeChatRooms()} />
-        <ChatGroup />
+        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={myChatRooms()} setActiveChatId={setActiveChatId} activeChatId={activeChatId} />
+        <ChatGroup chatRoomId={activeChatId} tgc={tgc} />
       </div>
     </>
   )
