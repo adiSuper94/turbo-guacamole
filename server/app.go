@@ -6,15 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"adisuper94/turboguac/wsmessagespec"
 
+	"github.com/google/uuid"
 	"nhooyr.io/websocket"
 )
 
@@ -28,13 +27,11 @@ func getChatRooms(ctx context.Context, username string) ([]generated.ChatRoom, e
 	return chatRooms, nil
 }
 
-var hbs *template.Template
-
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
+
 func main() {
-	hbs = template.Must(template.ParseGlob("*.html"))
 	conn := getDBConn()
 	defer conn.Close()
 	server := Server{
@@ -81,14 +78,10 @@ func main() {
 
 	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
 		enableCors(&w)
-    fmt.Println("Online Users")
+		fmt.Println("Online Users")
 		var activeUsers []string
 		for k := range server.clients {
 			activeUsers = append(activeUsers, k)
-		}
-		if getAcceptHeader(r) == HTML {
-			hbs.ExecuteTemplate(os.Stdin, "online-users", activeUsers)
-			return
 		}
 		json.NewEncoder(w).Encode(activeUsers)
 	})
@@ -103,10 +96,6 @@ func main() {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			if getAcceptHeader(r) == HTML {
-				hbs.ExecuteTemplate(os.Stdin, "active-chat-rooms", chatRooms)
-				return
-			}
 			json.NewEncoder(w).Encode(chatRooms)
 		case http.MethodPost:
 			chatRoomName := r.FormValue("chatroom_name")
@@ -118,6 +107,25 @@ func main() {
 			}
 			json.NewEncoder(w).Encode(chatRoom)
 		}
+	})
+
+	http.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		queries := GetQueries()
+		chatRoomIdStr := r.FormValue("chatRoomId")
+    chatRoomId, err := uuid.Parse(chatRoomIdStr);
+    if err != nil{
+			fmt.Fprintf(os.Stderr, "Error while parsing chatroomid\n%v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+    }
+    messages, err :=queries.GetMessagesByChatRoomId(r.Context(), chatRoomId)
+    if err != nil{
+			fmt.Fprintf(os.Stderr, "Error while getting messages\n%v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+    }
+    json.NewEncoder(w).Encode(messages)
 	})
 
 	http.HandleFunc("/dms", func(w http.ResponseWriter, r *http.Request) {
@@ -138,44 +146,6 @@ func main() {
 		Handler: nil,
 	}
 	log.Fatal(httpServer.ListenAndServe())
-}
-
-type httpAcceptType int
-
-const (
-	HTML httpAcceptType = iota
-	JSON
-	UNKNOWN
-)
-
-func getAcceptHeader(r *http.Request) httpAcceptType {
-	rawAcceptHeader := r.Header.Get("Accept")
-	acceptMimeTypes := strings.Split(rawAcceptHeader, ",")
-	accpetsJSON := false
-	accpetsHTML := false
-	for _, acceptMimeType := range acceptMimeTypes {
-		mimeTypeParts := strings.Split(acceptMimeType, ";")
-		mimeType := mimeTypeParts[0]
-		switch mimeType {
-		case "text/html":
-			accpetsHTML = true
-
-		case "application/json":
-			accpetsJSON = true
-		}
-	}
-
-	if accpetsJSON && accpetsHTML {
-		return UNKNOWN
-	}
-	if accpetsJSON {
-		return JSON
-	}
-	if accpetsHTML {
-		return HTML
-	}
-
-	return UNKNOWN
 }
 
 func askQuestion(question string) bool {

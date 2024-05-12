@@ -18,7 +18,7 @@ export type WSMessage = {
 }
 
 export type ChatRoom = {
-  Id: string;
+  ID: string;
   Name: string;
   CreatedAt: Date
   ModifiedAt: Date
@@ -27,6 +27,15 @@ export type ChatRoom = {
 export type DM = {
   UserName: string;
   ChatRoomId: string;
+}
+
+export type Message = {
+  Id: string;
+  Body: string;
+  ChatRoomId: string;
+  SenderID: string;
+  CreatedAt: Date;
+  ModifiedAt: Date;
 }
 
 export const NilUUID = "00000000-0000-0000-0000-000000000000";
@@ -53,6 +62,8 @@ export class TurboGuacClient {
     return tgc;
   }
 
+  getUserName() { return this.userName; }
+
   private loginOrRegister() {
     const loginRequest: WSMessage = {
       Id: crypto.randomUUID(),
@@ -66,6 +77,20 @@ export class TurboGuacClient {
 
   private sendWSMessage(message: WSMessage) {
     this.ws.send(JSON.stringify(message));
+  }
+
+  async sendMessage(data: string, chatRoomId: string) {
+    if (chatRoomId.trim() == "") {
+      return null;
+    }
+    const message: WSMessage = {
+      Id: crypto.randomUUID(),
+      Data: data,
+      To: chatRoomId,
+      From: this.userName,
+      Type: WSMessageType.Text
+    }
+    this.sendWSMessage(message);
   }
 
   async createChatRoom(roomName: string) {
@@ -93,6 +118,13 @@ export class TurboGuacClient {
     const url = `http://${this.serverAddr}/dms?username=${this.userName}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
     let data: DM[] = await response.json();
+    return data;
+  }
+
+  async getMessages(chatRoomId: string) {
+    const url = `http://${this.serverAddr}/messages?chatRoomId=${chatRoomId}`;
+    let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
+    let data: Message[] = await response.json();
     return data;
   }
 }
