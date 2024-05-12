@@ -1,5 +1,5 @@
 import { For, Match, Switch, createEffect, createSignal } from "solid-js"
-import { Message, TurboGuacClient } from "turbosdk-js";
+import { Message, NilUUID, TurboGuacClient } from "turbosdk-js";
 
 interface Props {
   tgc: () => TurboGuacClient | undefined;
@@ -7,6 +7,30 @@ interface Props {
 }
 
 const [messages, setMessages] = createSignal<Message[]>();
+
+async function sendMessage(props: Props) {
+  const textArea = (document.getElementById("textarea")) as HTMLTextAreaElement;
+  const text = textArea.value;
+  textArea.value = "";
+  if (text == null) return;
+  if (props.tgc() == null) return;
+  const chatRoomId = props.chatRoomId();
+  if (chatRoomId == null) return;
+  if (text.trim() == "") return;
+  await props.tgc()!.sendMessage(text, chatRoomId);
+  const userName = props.tgc()!.getUserName();
+  let message: Message = {
+    Id: NilUUID,
+    Body: text,
+    SenderID: userName,
+    ChatRoomId: chatRoomId,
+    CreatedAt: new Date(),
+    ModifiedAt: new Date()
+  };
+  let currMessages = messages() ?? [];
+  currMessages?.push(message);
+  setMessages(currMessages);
+}
 
 export function ChatGroup(props: Props) {
   const tgc = props.tgc;
@@ -18,7 +42,6 @@ export function ChatGroup(props: Props) {
     }
   });
 
-
   return (
     <>
       <div class="chat-group">
@@ -29,7 +52,7 @@ export function ChatGroup(props: Props) {
                 <div class="chat-bubble">{message.Body}</div>
               </div>
             }>
-              <Match when={message.SenderID == tgc()?.getUserName()??""}>
+              <Match when={message.SenderID == tgc()?.getUserName()}>
                 <div class="chat chat-end">
                   <div class="chat-bubble">{message.Body}</div>
                 </div>
@@ -39,8 +62,8 @@ export function ChatGroup(props: Props) {
           </For >
         </div >
         <div class="message-input join">
-          <textarea class="textarea textarea-bordered join-item"></textarea>
-          <button class="btn join-item">Send</button>
+          <textarea id="textarea" class="textarea textarea-bordered join-item" onKeyPress={async (event) => { if (event.keyCode == 13) await sendMessage(props) }}></textarea>
+          <button class="btn join-item" onClick={async () => await sendMessage(props)}>Send</button>
         </div>
       </div >
     </>
