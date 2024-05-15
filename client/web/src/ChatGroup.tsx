@@ -1,35 +1,32 @@
 import { For, Match, Switch, createEffect, createSignal } from "solid-js"
-import { Message, NilUUID, TurboGuacClient } from "turbosdk-js";
+import { Message, NilUUID, TurboGuacClient, WSMessage, WSMessageType } from "turbosdk-js";
 
 interface Props {
   tgc: () => TurboGuacClient | undefined;
   chatRoomId: () => string | undefined;
 }
 
-const [messages, setMessages] = createSignal<Message[]>();
+const [messages, setMessages] = createSignal<Message[]>([], {equals: false});
 
 async function sendMessage(props: Props) {
   const textArea = (document.getElementById("textarea")) as HTMLTextAreaElement;
   const text = textArea.value;
   textArea.value = "";
-  if (text == null) return;
+  if (text == null || text.trim() == "") return;
   if (props.tgc() == null) return;
   const chatRoomId = props.chatRoomId();
   if (chatRoomId == null) return;
-  if (text.trim() == "") return;
-  await props.tgc()!.sendMessage(text, chatRoomId);
   const userName = props.tgc()!.getUserName();
   let message: Message = {
-    Id: NilUUID,
+    ID: NilUUID,
     Body: text,
     SenderID: userName,
-    ChatRoomId: chatRoomId,
-    CreatedAt: new Date(),
-    ModifiedAt: new Date()
+    ChatRoomID: chatRoomId
   };
   let currMessages = messages() ?? [];
-  currMessages?.push(message);
+  currMessages.push(message);
   setMessages(currMessages);
+  await props.tgc()!.sendMessage(text, chatRoomId);
 }
 
 export function ChatGroup(props: Props) {
@@ -38,9 +35,26 @@ export function ChatGroup(props: Props) {
     let roomId = props.chatRoomId();
     if (roomId != null && props.tgc() != null) {
       const messagez = await tgc()!.getMessages(roomId!);
+      tgc()?.onMessage(processIncomingMsg);
       setMessages(messagez);
     }
   });
+
+  function processIncomingMsg(wsMsg: WSMessage) {
+    console.log(JSON.stringify(wsMsg, null, 2));
+    if (wsMsg.Type != WSMessageType.Text) return;
+    if (wsMsg.To != props.chatRoomId()) return;
+    const msg: Message = {
+      ID: wsMsg.Id,
+      Body: wsMsg.Data,
+      SenderID: wsMsg.From,
+      ChatRoomID: wsMsg.To
+    };
+    let currMessages = messages() ?? [];
+    currMessages?.push(msg);
+    setMessages(currMessages);
+  }
+
 
   return (
     <>

@@ -30,12 +30,10 @@ export type DM = {
 }
 
 export type Message = {
-  Id: string;
+  ID: string;
   Body: string;
-  ChatRoomId: string;
+  ChatRoomID: string;
   SenderID: string;
-  CreatedAt: Date;
-  ModifiedAt: Date;
 }
 
 export const NilUUID = "00000000-0000-0000-0000-000000000000";
@@ -77,6 +75,13 @@ export class TurboGuacClient {
 
   private sendWSMessage(message: WSMessage) {
     this.ws.send(JSON.stringify(message));
+  }
+
+  onMessage(fn: (wsMsg : WSMessage) => void){
+    this.ws.onmessage  =((event: MessageEvent)=> {
+      const wsMsg = JSON.parse(event.data);
+      fn(wsMsg);
+    });
   }
 
   async sendMessage(data: string, chatRoomId: string) {

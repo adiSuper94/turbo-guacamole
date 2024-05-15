@@ -38,4 +38,4 @@ SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_ro
   INNER JOIN members ON members.chat_room_id = private_chats.chat_room_id WHERE members.username != @username;
 
 -- name: GetMessagesByChatRoomId :many
-SELECT * FROM messages WHERE  messages.chat_room_id = @chat_room_id;
+SELECT chat_room_id, id, body, sender_id  FROM messages WHERE  messages.chat_room_id = @chat_room_id;
