@@ -6,7 +6,7 @@ interface Props {
   chatRoomId: () => string | undefined;
 }
 
-const [messages, setMessages] = createSignal<Message[]>([], {equals: false});
+const [messages, setMessages] = createSignal<Message[]>([], { equals: false });
 
 async function sendMessage(props: Props) {
   const textArea = (document.getElementById("textarea")) as HTMLTextAreaElement;
@@ -27,6 +27,8 @@ async function sendMessage(props: Props) {
   currMessages.push(message);
   setMessages(currMessages);
   await props.tgc()!.sendMessage(text, chatRoomId);
+  const messageBox = document.getElementById("message-list")!
+  messageBox.scrollTop = messageBox.scrollHeight;
 }
 
 export function ChatGroup(props: Props) {
@@ -53,13 +55,15 @@ export function ChatGroup(props: Props) {
     let currMessages = messages() ?? [];
     currMessages?.push(msg);
     setMessages(currMessages);
+    const messageBox = document.getElementById("message-list")!
+    messageBox.scrollTop = messageBox.scrollHeight;
   }
 
 
   return (
     <>
       <div class="chat-group">
-        <div class="chats overflow-x-auto">
+        <div id="message-list" class="chats overflow-x-auto">
           <For each={messages()}>{(message, _i) =>
             <Switch fallback={
               <div class="chat chat-start">
@@ -76,7 +80,7 @@ export function ChatGroup(props: Props) {
           </For >
         </div >
         <div class="message-input join">
-          <textarea id="textarea" class="textarea textarea-bordered join-item" onKeyPress={async (event) => { if (event.keyCode == 13) await sendMessage(props) }}></textarea>
+          <textarea id="textarea" class="textarea textarea-bordered join-item" onKeyUp={async (event) => { if (event.keyCode == 13) await sendMessage(props) }}></textarea>
           <button class="btn join-item" onClick={async () => await sendMessage(props)}>Send</button>
         </div>
       </div >
