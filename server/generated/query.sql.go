@@ -130,6 +130,42 @@ func (q *Queries) GetDMs(ctx context.Context, username string) ([]GetDMsRow, err
 	return items, nil
 }
 
+const getMessagesByChatRoomId = `-- name: GetMessagesByChatRoomId :many
+SELECT chat_room_id, id, body, sender_id  FROM messages WHERE  messages.chat_room_id = $1
+`
+
+type GetMessagesByChatRoomIdRow struct {
+	ChatRoomID uuid.UUID
+	ID         uuid.UUID
+	Body       string
+	SenderID   string
+}
+
+func (q *Queries) GetMessagesByChatRoomId(ctx context.Context, chatRoomID uuid.UUID) ([]GetMessagesByChatRoomIdRow, error) {
+	rows, err := q.db.Query(ctx, getMessagesByChatRoomId, chatRoomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMessagesByChatRoomIdRow
+	for rows.Next() {
+		var i GetMessagesByChatRoomIdRow
+		if err := rows.Scan(
+			&i.ChatRoomID,
+			&i.ID,
+			&i.Body,
+			&i.SenderID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT username, created_at, modified_at FROM users WHERE username = $1
 `

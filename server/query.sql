@@ -36,3 +36,6 @@ SELECT * FROM chat_rooms WHERE id = @id;
 SELECT private_chats.chat_room_id, members.username FROM (SELECT members.chat_room_id AS chat_room_id FROM members
   GROUP BY members.chat_room_id HAVING count(members.username) = 2) AS private_chats
   INNER JOIN members ON members.chat_room_id = private_chats.chat_room_id WHERE members.username != @username;
+
+-- name: GetMessagesByChatRoomId :many
+SELECT chat_room_id, id, body, sender_id  FROM messages WHERE  messages.chat_room_id = @chat_room_id;

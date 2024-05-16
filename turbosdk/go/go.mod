@@ -2,7 +2,7 @@ module adisuper94/turboguac/turbosdk
 
 go 1.21.3
 
-replace adisuper94/turboguac/wsmessagespec => ../wsmessagespec
+replace adisuper94/turboguac/wsmessagespec => ../../wsmessagespec
 
 require (
 	adisuper94/turboguac/wsmessagespec v0.0.0-00010101000000-000000000000
