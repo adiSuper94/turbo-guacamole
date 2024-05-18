@@ -139,7 +139,7 @@ func main() {
 		}
 		json.NewEncoder(w).Encode(dms)
 	})
-  layeredRouter := corsMiddleware(router)
+	layeredRouter := corsMiddleware(router)
 	httpServer := &http.Server{
 		Addr:    ":8080",
 		Handler: layeredRouter,
