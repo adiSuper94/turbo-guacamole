@@ -1,9 +1,9 @@
 import { For, Match, Switch, createEffect, createSignal } from "solid-js"
-import { Message, NilUUID, TurboGuacClient, WSMessage, WSMessageType } from "turbosdk-js";
+import { ChatRoom, Message, NilUUID, TurboGuacClient, WSMessage, WSMessageType } from "turbosdk-js";
 
 interface Props {
   tgc: () => TurboGuacClient | undefined;
-  chatRoomId: () => string | undefined;
+  chatRoomRoom: () => ChatRoom | undefined;
 }
 
 const [messages, setMessages] = createSignal<Message[]>([], { equals: false });
@@ -14,7 +14,7 @@ async function sendMessage(props: Props) {
   textArea.value = "";
   if (text == null || text.trim() == "") return;
   if (props.tgc() == null) return;
-  const chatRoomId = props.chatRoomId();
+  const chatRoomId = props.chatRoomRoom()?.ID;
   if (chatRoomId == null) return;
   const userName = props.tgc()!.getUserName();
   let message: Message = {
@@ -34,7 +34,7 @@ async function sendMessage(props: Props) {
 export function ChatGroup(props: Props) {
   const tgc = props.tgc;
   createEffect(async function() {
-    let roomId = props.chatRoomId();
+    let roomId = props.chatRoomRoom()?.ID;
     if (roomId != null && props.tgc() != null) {
       const messagez = await tgc()!.getMessages(roomId!);
       tgc()?.onMessage(processIncomingMsg);
@@ -45,7 +45,8 @@ export function ChatGroup(props: Props) {
   function processIncomingMsg(wsMsg: WSMessage) {
     console.log(JSON.stringify(wsMsg, null, 2));
     if (wsMsg.Type != WSMessageType.Text) return;
-    if (wsMsg.To != props.chatRoomId()) return;
+    let roomId = props.chatRoomRoom()?.ID;
+    if (wsMsg.To != roomId) return;
     const msg: Message = {
       ID: wsMsg.Id,
       Body: wsMsg.Data,
@@ -63,6 +64,9 @@ export function ChatGroup(props: Props) {
   return (
     <>
       <div class="chat-group">
+        <div class="navbar chat-header">
+          <div class="text-xl"><b>{props.chatRoomRoom()?.Name ?? ""}</b></div>
+        </div>
         <div id="message-list" class="chats overflow-x-auto">
           <For each={messages()}>{(message, _i) =>
             <Switch fallback={

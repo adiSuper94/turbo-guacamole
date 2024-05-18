@@ -3,22 +3,24 @@ import { ChatRoom } from "turbosdk-js";
 
 interface Props {
   onlineUsers: string[] | undefined;
-  myChatRooms: ChatRoom[] | undefined;
-  activeChatId: () => string|undefined;
-  setActiveChatId: (s: string) => void
+  myChatRooms: () => ChatRoom[] | undefined;
+  activeChatRoom: () => ChatRoom | undefined;
+  setActiveChatRoom: (s: ChatRoom | undefined) => void
 }
 
 
 export function ContactGroup(propArgs: Props) {
   const props = mergeProps({ onlineUsers: [], myChatRooms: [] }, propArgs);
   function onClickMyChat(newId: string) {
-    let oldActive = document.getElementById(props.activeChatId() ?? "");
+    let oldActive = document.getElementById(props.activeChatRoom()?.ID ?? "");
     if (oldActive) {
       oldActive.className = "hover";
     }
     let newActive = document.getElementById(newId)!;
     newActive.className = "hover bg-base-200";
-    props.setActiveChatId(newId);
+    const newChatRoom = props.myChatRooms()?.find(chatRoom => chatRoom.ID == newId);
+    props.setActiveChatRoom(newChatRoom);
+
   }
   return (
     <>
@@ -48,7 +50,7 @@ export function ContactGroup(propArgs: Props) {
               </tr>
             </thead>
             <tbody>
-              <For each={props.myChatRooms}>{(myChatRoom, _i) =>
+              <For each={props.myChatRooms()}>{(myChatRoom, _i) =>
                 <tr id={myChatRoom.ID} class="hover" onClick={() => onClickMyChat(myChatRoom.ID)}>
                   <td>{myChatRoom.Name}</td>
                 </tr>
