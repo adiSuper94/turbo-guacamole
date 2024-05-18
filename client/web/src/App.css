@@ -31,7 +31,8 @@ body {
   width: 100vw;
   background: rgba(0, 0, 0, 0.75);
   display: flex;
-  justify-content: center;
+  flex-direction: row;
+  justify-content: space-between;
 }
 /* App Body */
 .app-body {

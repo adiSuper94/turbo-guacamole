@@ -12,11 +12,11 @@ function App() {
   const [activeChatId, setActiveChatId] = createSignal<string>();
 
   async function tryConnect(serverURL: string, userName: string) {
-    if (tgc()) return true;
     try {
       const newTgc = await TurboGuacClient.createClient(serverURL, userName);
       setTgc(newTgc);
       await updateContactGroup();
+      setActiveChatId("");
     }
     catch (e) {
       console.log("Erro while establishing websocket connection", e);
@@ -51,7 +51,14 @@ function App() {
   return (
     <>
       <div class="navbar app-header">
-        <p class="text-2xl">🐌 Turbo Guac 🥑</p>
+        <div></div>
+        <p id="header-title" class="text-2xl">🐌 Turbo Guac 🥑</p>
+        <button id="settings" class="btn btn-square" onClick={() => {
+          const modal = document.getElementById('input_modal') as HTMLDialogElement;
+          modal.showModal();
+        }}>
+        <img src = "../public/cog.svg"/>
+        </button>
       </div>
       <dialog id="input_modal" class="modal">
         <div class="modal-box">

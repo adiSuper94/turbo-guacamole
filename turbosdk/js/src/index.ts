@@ -127,6 +127,7 @@ export class TurboGuacClient {
   }
 
   async getMessages(chatRoomId: string) {
+    if(chatRoomId.trim() == "" || chatRoomId == NilUUID) return [];
     const url = `http://${this.serverAddr}/messages?chatRoomId=${chatRoomId}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
     let data: Message[] = await response.json();
