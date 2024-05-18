@@ -27,8 +27,11 @@ func getChatRooms(ctx context.Context, username string) ([]generated.ChatRoom, e
 	return chatRooms, nil
 }
 
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
@@ -38,8 +41,8 @@ func main() {
 		clients: make(map[string]ActiveClient),
 	}
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+	router := http.NewServeMux()
+	router.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error1: ", err)
@@ -76,8 +79,7 @@ func main() {
 		c.Close(websocket.StatusNormalClosure, "")
 	})
 
-	http.HandleFunc("/online-users", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+	router.HandleFunc("GET /online-users", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Online Users")
 		var activeUsers []string
 		for k := range server.clients {
@@ -86,50 +88,47 @@ func main() {
 		json.NewEncoder(w).Encode(activeUsers)
 	})
 
-	http.HandleFunc("/chatrooms", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+	router.HandleFunc("GET /chatrooms", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Chatrooms")
-		switch r.Method {
-		case http.MethodGet:
-			chatRooms, err := getChatRooms(r.Context(), r.FormValue("username"))
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			json.NewEncoder(w).Encode(chatRooms)
-		case http.MethodPost:
-			chatRoomName := r.FormValue("chatroom_name")
-			username := r.FormValue("username")
-			chatRoom, err := createChatRoom(r.Context(), username, chatRoomName)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			json.NewEncoder(w).Encode(chatRoom)
+		chatRooms, err := getChatRooms(r.Context(), r.FormValue("username"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
+		json.NewEncoder(w).Encode(chatRooms)
+
 	})
 
-	http.HandleFunc("/messages", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+	router.HandleFunc("POST /chatrooms", func(w http.ResponseWriter, r *http.Request) {
+		chatRoomName := r.FormValue("chatroom_name")
+		username := r.FormValue("username")
+		chatRoom, err := createChatRoom(r.Context(), username, chatRoomName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(chatRoom)
+	})
+
+	router.HandleFunc("GET /messages", func(w http.ResponseWriter, r *http.Request) {
 		queries := GetQueries()
 		chatRoomIdStr := r.FormValue("chatRoomId")
-    chatRoomId, err := uuid.Parse(chatRoomIdStr);
-    if err != nil{
+		chatRoomId, err := uuid.Parse(chatRoomIdStr)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while parsing chatroomid\n%v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
-    }
-    messages, err :=queries.GetMessagesByChatRoomId(r.Context(), chatRoomId)
-    if err != nil{
+		}
+		messages, err := queries.GetMessagesByChatRoomId(r.Context(), chatRoomId)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting messages\n%v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
-    }
-    json.NewEncoder(w).Encode(messages)
+		}
+		json.NewEncoder(w).Encode(messages)
 	})
 
-	http.HandleFunc("/dms", func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w)
+	router.HandleFunc("GET /dms", func(w http.ResponseWriter, r *http.Request) {
 		queries := GetQueries()
 		username := r.FormValue("username")
 		dms, err := queries.GetDMs(r.Context(), username)
@@ -140,10 +139,10 @@ func main() {
 		}
 		json.NewEncoder(w).Encode(dms)
 	})
-
+  layeredRouter := corsMiddleware(router)
 	httpServer := &http.Server{
 		Addr:    ":8080",
-		Handler: nil,
+		Handler: layeredRouter,
 	}
 	log.Fatal(httpServer.ListenAndServe())
 }
