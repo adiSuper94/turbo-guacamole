@@ -57,7 +57,7 @@ function App() {
           const modal = document.getElementById('input_modal') as HTMLDialogElement;
           modal.showModal();
         }}>
-        <img src = "../public/cog.svg"/>
+          <img src="../public/cog.svg" />
         </button>
       </div>
       <dialog id="input_modal" class="modal">
@@ -79,7 +79,7 @@ function App() {
         </div>
       </dialog>
       <div class="app-body">
-        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={myChatRooms} setActiveChatRoom={setActiveChatRoom} activeChatRoom={activeChatRoom} />
+        <ContactGroup onlineUsers={onlineUsers()} myChatRooms={myChatRooms} setMyChatRooms={setMyChatRooms} setActiveChatRoom={setActiveChatRoom} activeChatRoom={activeChatRoom} tgc={tgc} />
         <ChatGroup chatRoomRoom={activeChatRoom} tgc={tgc} />
       </div>
     </>

@@ -1,16 +1,18 @@
 import { For, mergeProps } from "solid-js";
-import { ChatRoom } from "turbosdk-js";
+import { ChatRoom, TurboGuacClient } from "turbosdk-js";
 
 interface Props {
   onlineUsers: string[] | undefined;
   myChatRooms: () => ChatRoom[] | undefined;
+  setMyChatRooms: (rooms: ChatRoom[] | undefined) => void;
   activeChatRoom: () => ChatRoom | undefined;
   setActiveChatRoom: (s: ChatRoom | undefined) => void
+  tgc: () => TurboGuacClient | undefined;
 }
 
 
 export function ContactGroup(propArgs: Props) {
-  const props = mergeProps({ onlineUsers: [], myChatRooms: [] }, propArgs);
+  const props: Props = mergeProps({ onlineUsers: []}, propArgs);
   function onClickMyChat(newId: string) {
     let oldActive = document.getElementById(props.activeChatRoom()?.ID ?? "");
     if (oldActive) {
@@ -20,6 +22,21 @@ export function ContactGroup(propArgs: Props) {
     newActive.className = "hover bg-base-200";
     const newChatRoom = props.myChatRooms()?.find(chatRoom => chatRoom.ID == newId);
     props.setActiveChatRoom(newChatRoom);
+
+  }
+  async function onClickOnlineUsers(onlineUser: string) {
+    const tgc = props.tgc()!;
+    const dm = await tgc.startDM(onlineUser);
+    console.log(dm);
+    if (dm == null) return;
+    const existingChatRoom = props.myChatRooms()?.find(chatRoom => chatRoom.ID == dm?.ChatRoomID);
+    if (existingChatRoom != null) {
+      console.log(existingChatRoom);
+      props.setActiveChatRoom(existingChatRoom);
+      return;
+    }
+    const myChatRooms = await tgc.getMyChatRooms();
+    props.setMyChatRooms(myChatRooms);
 
   }
   return (
@@ -34,7 +51,7 @@ export function ContactGroup(propArgs: Props) {
             </thead>
             <tbody>
               <For each={props.onlineUsers}>{(onlineUser, i) =>
-                <tr id={`online-users-${i}`} class="hover">
+                <tr id={`online-users-${i}`} class="hover" onClick={async () => await onClickOnlineUsers(onlineUser)}>
                   <td>{onlineUser}</td>
                 </tr>
               }

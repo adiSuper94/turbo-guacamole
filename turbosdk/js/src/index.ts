@@ -25,8 +25,8 @@ export type ChatRoom = {
 }
 
 export type DM = {
-  UserName: string;
-  ChatRoomId: string;
+  Username: string;
+  ChatRoomID: string;
 }
 
 export type Message = {
@@ -77,8 +77,8 @@ export class TurboGuacClient {
     this.ws.send(JSON.stringify(message));
   }
 
-  onMessage(fn: (wsMsg : WSMessage) => void){
-    this.ws.onmessage  =((event: MessageEvent)=> {
+  onMessage(fn: (wsMsg: WSMessage) => void) {
+    this.ws.onmessage = ((event: MessageEvent) => {
       const wsMsg = JSON.parse(event.data);
       fn(wsMsg);
     });
@@ -98,10 +98,10 @@ export class TurboGuacClient {
     this.sendWSMessage(message);
   }
 
-  async createChatRoom(roomName: string) {
+  async createChatRoom(roomName: string): Promise<ChatRoom> {
     const url = `http://${this.serverAddr}/chatrooms?username=${this.userName}&chatroom_name=${roomName}`;
     let response = await fetch(url, { method: "POST", headers: { "Accept": "application/json" } });
-    return response;
+    return await response.json();
   }
 
   async getMyChatRooms() {
@@ -119,6 +119,30 @@ export class TurboGuacClient {
     return data;
   }
 
+  async startDM(username: string): Promise<DM|null> {
+    if(username.trim() == this.userName.trim()) return null;
+    const dms: DM[] = await this.getDMs() ?? [];
+    for (const dm of dms) {
+      if (dm.Username == username) {
+        return dm;
+      }
+    }
+    const chatRoom = await this.createChatRoom(encodeURIComponent(`${username}&${this.userName}`));
+    this.addMemberToChatRoom(chatRoom.ID, username);
+    return { Username: username, ChatRoomID: chatRoom.ID };
+  }
+
+  addMemberToChatRoom(chatRoomId: string, userName: string) {
+    const addMemberRequest: WSMessage = {
+      Id: crypto.randomUUID(),
+      Type: WSMessageType.AddMemberToChatRoom,
+      Data: userName,
+      To: chatRoomId,
+      From: this.userName
+    };
+    this.sendWSMessage(addMemberRequest);
+  }
+
   async getDMs() {
     const url = `http://${this.serverAddr}/dms?username=${this.userName}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
@@ -127,7 +151,7 @@ export class TurboGuacClient {
   }
 
   async getMessages(chatRoomId: string) {
-    if(chatRoomId.trim() == "" || chatRoomId == NilUUID) return [];
+    if (chatRoomId.trim() == "" || chatRoomId == NilUUID) return [];
     const url = `http://${this.serverAddr}/messages?chatRoomId=${chatRoomId}`;
     let response = await fetch(url, { method: "GET", headers: { "Accept": "application/json" } });
     let data: Message[] = await response.json();
