@@ -9,6 +9,9 @@ An app that lets you chat with people near you, and doesn't let you if you aren'
 - Run `./server/turbo.sql` on `turbo` db to initialize the db schema.
 - cd into `./server` and run `go run .` to start the server.
 - To start the web client :
+    - cd into `./turbosdk/js`
+    - run `npm install` to install dependencies
+    - run `npm run build` to build the turbo-js sdk
     - cd into `./client/web/`
     - run `npm install` to install dependencies
     - run `npm run dev` to start the client app
