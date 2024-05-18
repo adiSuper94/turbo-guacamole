@@ -1,6 +1,6 @@
 module adisuper94/turboguac/client
 
-go 1.21.3
+go 1.22.3
 
 require (
 	adisuper94/turboguac/turbosdk v0.0.0-00010101000000-000000000000
