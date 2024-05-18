@@ -34,6 +34,14 @@ body {
   flex-direction: row;
   justify-content: space-between;
 }
+
+.chat-header {
+  width: 98%;
+  background: rgba(0, 0, 0, 0.50);
+  border: 1px solid #000000;
+  border-radius: 5px 5px 0 0;
+}
+
 /* App Body */
 .app-body {
   position: relative;
@@ -54,13 +62,12 @@ body {
 .chat-group {
   position: relative;
   width: 64%;
-  height: 85vh;
-  max-height:85vh;
+  height: 86vh;
+  max-height:86vh;
   display: flex;
   align-items: start;
   align-content: stretch;
   justify-content: start;
-  row-gap: 1em;
   padding: 0px 0px 0px 0px;
   flex-direction: column;
   flex-wrap: nowrap;
@@ -71,7 +78,7 @@ body {
 .contact-group {
   position: relative;
   width: 33%;
-  height: 85vh;
+  height: 86vh;
   display: flex;
   align-items: start;
   align-content: stretch;
@@ -86,6 +93,7 @@ body {
 .message-input {
   width: 98%;
   height: 18%;
+  margin-top: 0.5em;
 }
 
 /* Chats */
@@ -94,7 +102,7 @@ body {
   height: 80%;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #000000;
-  border-radius: 5px;
+  border-radius: 0 0 5px 5px;
   flex-shrink: 0;
 }
 
