@@ -38,7 +38,7 @@ func GetQueries() *generated.Queries {
 }
 
 func createDBConnection(connectionCount int32) *pgxpool.Pool {
-	pgxConfig, err := pgxpool.ParseConfig("postgres://adisuper:adisuper@localhost:5432/turbo?sslmode=disable")
+  pgxConfig, err := pgxpool.ParseConfig("postgres://postgres:postgres@localhost:5432/turbo?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
